@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Khóa Học{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'courses.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <h1>Khóa Học Chất Lượng Cao</h1>
+        <p>Học tập hiệu quả – Kiến thức vững chắc cho tương lai</p>
+    </div>
+</div>
+
+<div class="courses-page container">
+    <!-- Sidebar lọc -->
+    <aside class="sidebar">
+        <h2>Lọc Khóa Học</h2>
+        
+        <div class="filter-group">
+            <h3>Cấp học</h3>
+            {% for level in levels %}
+                <a href="?level={{ level.id }}" class="{% if request.GET.level == level.id|stringformat:'s' %}active{% endif %}">{{ level.name }}</a>
+            {% endfor %}
+        </div>
+
+        <div class="filter-group">
+            <h3>Lớp</h3>
+            {% for grade in grades %}
+                <a href="?grade={{ grade.id }}" class="{% if request.GET.grade == grade.id|stringformat:'s' %}active{% endif %}">{{ grade.name }}</a>
+            {% endfor %}
+        </div>
+
+        <div class="filter-group">
+            <h3>Môn học</h3>
+            {% for subject in subjects %}
+                <a href="?subject={{ subject.id }}" class="{% if request.GET.subject == subject.id|stringformat:'s' %}active{% endif %}">{{ subject.name }}</a>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <!-- Danh sách khóa học -->
+    <main class="course-list">
+        <h2>Khóa Học Nổi Bật</h2>
+        
+        <div class="course-grid">
+            {% for course in courses %}
+            <div class="course-card">
+                <div class="course-image">
+                    {% if course.image %}
+                        <img src="{{ course.image.url }}" alt="{{ course.title }}">
+                    {% else %}
+                        <img src="{% static 'hq720.jpg' %}" alt="Mẫu khóa học">
+                    {% endif %}
+                </div>
+                <div class="course-info">
+                    <h3>{{ course.title }}</h3>
+                    <p>Môn: {{ course.subject }} • Lớp: {{ course.grade }} • Cấp: {{ course.level }}</p>
+                    <div class="price">{{ course.price }} VNĐ</div>
+                    <a href="/course/{{ course.id }}" class="btn-detail">Xem chi tiết →</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+{% endblock %}

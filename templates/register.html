@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Đăng ký{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-title">Tạo tài khoản</div>
+
+        <form method="POST" class="auth-form">
+            {% csrf_token %}
+
+            <input type="text" name="username" placeholder="Tên đăng nhập" class="auth-input" required>
+
+            <input type="email" name="email" placeholder="Email" class="auth-input" required>
+
+            <input type="text" name="phone" placeholder="Số điện thoại" class="auth-input">
+
+            <input type="password" name="password" placeholder="Mật khẩu" class="auth-input" required>
+
+            <input type="password" name="password2" placeholder="Nhập lại mật khẩu" class="auth-input" required>
+
+            <button type="submit" class="auth-btn">Đăng ký</button>
+        </form>
+
+        {% if error %}
+            <div class="auth-error">{{ error }}</div>
+        {% endif %}
+
+        <div class="auth-link">
+            Đã có tài khoản? <a href="{% url 'login' %}">Đăng nhập</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

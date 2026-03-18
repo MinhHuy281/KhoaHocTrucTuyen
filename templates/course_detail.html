@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ course.title }} - KhoaHocTrucTuyen{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'course_detail.css' %}">
+{% endblock %}
+{% block content %}
+<div class="course-detail">
+    <div class="video-section">
+      <div class="video-container">
+          {% if enrolled or lessons.0.is_free_preview %}
+              {% if lessons.0.get_youtube_id %}
+                  <iframe 
+                      width="100%" 
+                      height="500" 
+                      src="https://www.youtube-nocookie.com/embed/{{ lessons.0.get_youtube_id }}?rel=0"
+                      title="{{ lessons.0.title }}"
+                      frameborder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowfullscreen
+                      referrerpolicy="strict-origin-when-cross-origin">  <!-- ← THÊM DÒNG NÀY -->
+                  </iframe>
+              {% elif lessons.0.video_file %}
+                  <video controls poster="{% static 'images/video-poster.jpg' %}" class="main-video">
+                      <source src="{{ lessons.0.video_file.url }}" type="video/mp4">
+                      Trình duyệt không hỗ trợ video.
+                  </video>
+              {% else %}
+                  <div class="no-video-message">
+                      <i class="bi bi-play-circle-fill"></i>
+                      <p>Bài học không có video</p>
+                  </div>
+              {% endif %}
+          {% else %}
+              <div class="locked-video">
+                  <div class="lock-overlay">
+                      <i class="bi bi-lock-fill"></i>
+                      <h3>Đăng ký để xem bài giảng</h3>
+                      <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">Đăng ký ngay</a>
+                  </div>
+              </div>
+          {% endif %}
+      </div>
+
+        <div class="course-header">
+            <h1>{{ course.title }}</h1>
+            <p>{{ course.description|linebreaks|truncatewords:80 }}</p>
+            <div class="meta-row">
+                <div>Môn: <strong>{{ course.subject.name|default:"-" }}</strong></div>
+                <div>Lớp: <strong>{{ course.grade.name|default:"-" }}</strong></div>
+                <div>Cấp: <strong>{{ course.level.name|default:"-" }}</strong></div>
+            </div>
+            <div class="price-row">
+                <div class="price">
+                    {% if course.price == 0 %}Miễn phí{% else %}{{ course.price }} VNĐ{% endif %}
+                </div>
+                {% if enrolled %}
+                    <div class="enrolled">ĐÃ ĐĂNG KÝ</div>
+                {% else %}
+                    <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">ĐĂNG KÝ NGAY</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="lessons-section">
+        <h2>Nội dung khóa học ({{ lessons.count }} bài)</h2>
+        <div class="lesson-list">
+            {% for lesson in lessons %}
+                <div class="lesson-row">
+                    <div class="lesson-number">{{ forloop.counter }}</div>
+                    <div class="lesson-info">
+                        <h3>{{ lesson.title }}</h3>
+                        {% if lesson.video_file %}
+                            <span class="video-tag"><i class="bi bi-play-fill"></i> Có video</span>
+                        {% endif %}
+                        <p>{{ lesson.content|truncatewords:50 }}</p>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="no-content">Chưa có bài học nào.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

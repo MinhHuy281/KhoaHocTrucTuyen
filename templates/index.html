@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Trang Chủ - KhoaHocTrucTuyen{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO BANNER -->
+<section class="hero">
+  <div class="container hero-container">
+    <div class="hero-text">
+      <h1>Học Online Hiệu Quả Với KhoaHocTrucTuyen</h1>
+      <p>Hơn 1000+ khóa học chất lượng cao từ lớp 1 đến 12 và luyện thi đại học</p>
+      <a href="/courses/" class="btn-primary">Bắt Đầu Học Ngay</a>
+    </div>
+    <div class="hero-image">
+      <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800" alt="Học online hiệu quả" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<!-- DANH MỤC MÔN HỌC -->
+<section class="category-section">
+  <div class="container">
+    <h2 class="section-title">Các Môn Học Chính</h2>
+    <div class="category-grid">
+      <div class="category-card">
+        <div class="category-icon">📖</div>
+        <h3>Văn Học</h3>
+        <p>Tiếng Việt & Luyện thi</p>
+      </div>
+      <div class="category-card">
+        <div class="category-icon">📐</div>
+        <h3>Toán Học</h3>
+        <p>Lớp 1–12 & Luyện thi đại học</p>
+      </div>
+      <div class="category-card">
+        <div class="category-icon">📔</div>
+        <h3>Tiếng Anh</h3>
+        <p>Giao tiếp, Ngữ pháp & Luyện thi</p>
+      </div>
+      <div class="category-card">
+        <div class="category-icon">⚛️</div>
+        <h3>Vật Lý</h3>
+        <p>Chuyên sâu & Olympic</p>
+      </div>
+      <div class="category-card">
+        <div class="category-icon">🧪</div>
+        <h3>Hóa Học</h3>
+        <p>Thí nghiệm & Ứng dụng thực tế</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- KHÓA HỌC NỔI BẬT -->
+<section class="featured-courses">
+  <div class="container">
+    <h2 class="section-title">Khóa Học Nổi Bật</h2>
+    
+    <div class="course-grid">
+      {% for course in courses %}
+        <div class="course-card">
+          <div class="course-thumbnail">
+            {% if course.image %}
+              <img src="{{ course.image.url }}" alt="{{ course.title }}" loading="lazy">
+            {% else %}
+              <div class="no-image-placeholder">
+                <span>Chưa có ảnh</span>
+              </div>
+            {% endif %}
+            <div class="course-overlay">
+              <span class="course-level">{{ course.level }}</span>
+            </div>
+          </div>
+          <div class="course-body">
+            <h3 class="course-title">{{ course.title }}</h3>
+            <p class="course-desc">{{ course.description|truncatewords:20 }}</p>
+            <div class="course-meta">
+              <span>Môn: {{ course.subject }}</span>
+              <span>Lớp: {{ course.grade }}</span>
+            </div>
+            <div class="course-footer">
+              <span class="price">{{ course.price }} VNĐ</span>
+              <a href="/course/{{ course.id }}/" class="btn-detail">Xem chi tiết</a>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="no-data">Chưa có khóa học nổi bật. Hãy khám phá thêm!</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- THỐNG KÊ -->
+<section class="stats-section">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <h3>1,000+</h3>
+        <p>Khóa học chất lượng</p>
+      </div>
+      <div class="stat-item">
+        <h3>200+</h3>
+        <p>Giảng viên giỏi</p>
+      </div>
+      <div class="stat-item">
+        <h3>50,000+</h3>
+        <p>Học viên tin tưởng</p>
+      </div>
+      <div class="stat-item">
+        <h3>19 Năm</h3>
+        <p>Kinh nghiệm giáo dục online</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
