@@ -10,6 +10,9 @@ from django.shortcuts import render, redirect
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Course, Lesson, Enrollment
+from django.contrib import messages
+from django.utils import timezone
+
 # Trang chủ
 def index(request):
 
@@ -106,16 +109,24 @@ def enroll(request,id):
 
     return redirect("/course/"+str(id))
 
-def enroll_course(request,id):
-
-    course = get_object_or_404(Course,id=id)
-
-    Enrollment.objects.get_or_create(
-        user=request.user,
-        course=course
+@login_required  # ← THÊM DECORATOR NÀY (bắt buộc đăng nhập)
+def enroll_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Kiểm tra nếu đã enroll rồi
+    enrollment, created = Enrollment.objects.get_or_create(
+        user=request.user,  # giờ an toàn vì đã login_required
+        course=course,
+        defaults={'created': timezone.now()}
     )
-
-    return redirect("/course/"+str(id))
+    
+    if created:
+        messages.success(request, f'Bạn đã đăng ký khóa học "{course.title}" thành công!')
+    else:
+        messages.info(request, f'Bạn đã đăng ký khóa học này trước đó.')
+    
+    # Redirect về trang chi tiết khóa học
+    return redirect('course_detail', course_id=course.id)
 
 
 # LOGIN

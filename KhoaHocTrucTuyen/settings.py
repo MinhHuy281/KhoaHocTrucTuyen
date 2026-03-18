@@ -40,8 +40,9 @@ INSTALLED_APPS = [
 
     'courses',
     'accounts',
-    # Nếu sau này tạo app accounts cho auth custom, thêm: 'accounts',
+
 ]
+LOGIN_URL = '/login/'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -106,13 +107,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # Internationalization
-LANGUAGE_CODE = 'vi'  # Đổi sang tiếng Việt cho phù hợp
+# Internationalization
+LANGUAGE_CODE = 'vi'
 
-TIME_ZONE = 'Asia/Ho_Chi_Minh'  # Giờ Việt Nam (HCMC)
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = True 
 
 
 # Static files (CSS, JavaScript, Images)
