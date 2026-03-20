@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Kết quả bài tập - {{ attempt.quiz.title }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'course_detail.css' %}">
+    <link rel="stylesheet" href="{% static 'quiz_result.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="result-card">
+    <div class="result-header">
+        <h2>Kết quả bài tập</h2>
+        <p>{{ attempt.quiz.title }}</p>
+        <div class="score-circle 
+            {% if attempt.percentage < 50 %}score-low{% elif attempt.percentage < 80 %}score-medium{% else %}score-high{% endif %}">
+            {{ attempt.percentage|floatformat:0 }}%
+        </div>
+    </div>
+
+    <div class="result-body">
+        <div class="result-stats">
+            <div class="stat-item">
+                <h5>Điểm số</h5>
+                <p>{{ attempt.score }} / {{ attempt.total_points }}</p>
+            </div>
+            <div class="stat-item">
+                <h5>Câu đúng / sai</h5>
+                <p>{{ attempt.correct_answers }} / {{ attempt.wrong_answers }}</p>
+            </div>
+        </div>
+
+        <p class="text-center text-muted mb-5">
+            <i class="bi bi-clock-history me-2"></i>
+            Thời gian hoàn thành: {{ attempt.finished_at|timesince }} trước
+        </p>
+
+        <div class="btn-group">
+            <!-- Nút Làm lại bài này -->
+            <a href="{% url 'start_quiz' attempt.quiz.id %}" class="btn btn-custom btn-retry">
+                <i class="bi bi-arrow-repeat me-2"></i> Làm lại bài này
+            </a>
+
+            <!-- Nút Xem bài khác -->
+            <a href="{% url 'quiz_list' attempt.quiz.course.id %}" class="btn btn-custom btn-other">
+                <i class="bi bi-list-ul me-2"></i> Xem bài khác
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

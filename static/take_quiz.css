@@ -1,0 +1,117 @@
+/* take_quiz.css - Giao diện làm bài ôn luyện đơn giản, dễ nhìn */
+
+body {
+    background: #f9fafb;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Timer nhỏ gọn */
+.timer-box {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    max-width: 180px;
+    margin: 0 auto;
+}
+
+.timer-circle {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 6px solid #cbd5e1;
+}
+
+.timer-text {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.timer-label {
+    font-size: 0.95rem;
+    color: #64748b;
+}
+
+/* Câu hỏi */
+.question-box {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+}
+
+.question-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #1e40af;
+}
+
+.question-text {
+    font-size: 1.15rem;
+    margin-bottom: 20px;
+    color: #1e293b;
+}
+
+/* Lựa chọn - hover tick radio */
+.choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.choice-label {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-size: 1.1rem;
+    color: #334155;
+}
+
+.choice-label:hover {
+    background: #e0f2fe;
+    border-left: 5px solid #3b82f6;
+}
+
+.choice-radio {
+    margin-right: 16px;
+    accent-color: #3b82f6;
+}
+
+/* Nút Nộp bài - to vừa, đẹp, hover nhẹ */
+.btn-submit {
+    padding: 16px 80px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    background: #10b981;
+    border: none;
+    border-radius: 50px;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(16,185,129,0.25);
+}
+
+.btn-submit:hover {
+    background: #059669;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(16,185,129,0.4);
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .timer-circle { width: 100px; height: 100px; }
+    .timer-text { font-size: 2.4rem; }
+    .btn-submit { padding: 14px 60px; font-size: 1.15rem; }
+}

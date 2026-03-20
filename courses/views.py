@@ -1,33 +1,27 @@
-from django.shortcuts import render
-from .models import Course, Lesson
-from .models import Course,Level,Grade,Subject
+# courses/views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.utils import timezone
 from django.db.models import Q
-from django.shortcuts import render,get_object_or_404,redirect
-from .models import *
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import render, redirect
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from .models import Course, Lesson, Enrollment
-from django.contrib import messages
-from django.utils import timezone
+
+# Import tất cả model một lần
+from .models import (
+    Course, Lesson, Enrollment, Quiz, Question, Choice, UserQuizAttempt,
+    Level, Grade, Subject
+)
 
 # Trang chủ
 def index(request):
-
     courses = Course.objects.all()
-
-    return render(request, "index.html", {
-        "courses": courses
-    })
+    return render(request, "index.html", {"courses": courses})
 
 
 # Danh sách khóa học
-
-
 def courses(request):
-
     courses = Course.objects.all()
 
     level = request.GET.get("level")
@@ -37,13 +31,10 @@ def courses(request):
 
     if level:
         courses = courses.filter(level_id=level)
-
     if grade:
         courses = courses.filter(grade_id=grade)
-
     if subject:
         courses = courses.filter(subject_id=subject)
-
     if q:
         courses = courses.filter(
             Q(title__icontains=q) |
@@ -54,22 +45,23 @@ def courses(request):
     grades = Grade.objects.all()
     subjects = Subject.objects.all()
 
-    return render(request,"courses.html",{
-        "courses":courses,
-        "levels":levels,
-        "grades":grades,
-        "subjects":subjects,
+    return render(request, "courses.html", {
+        "courses": courses,
+        "levels": levels,
+        "grades": grades,
+        "subjects": subjects,
         "q": q
     })
 
 
+# Chi tiết khóa học
 def course_detail(request, course_id):
-    course = get_object_or_404(Course, id=course_id) 
+    course = get_object_or_404(Course, id=course_id)
     lessons = course.lessons.all().order_by('order')
 
     enrolled = False
     if request.user.is_authenticated:
-        enrolled = Enrollment.objects.filter(user=request.user, course=course).exists()
+        enrolled = course.enrollments.filter(user=request.user).exists()
 
     return render(request, "course_detail.html", {
         "course": course,
@@ -78,17 +70,16 @@ def course_detail(request, course_id):
     })
 
 
+# Xem bài học (lesson)
 def lesson_view(request, id):
-
-    lesson = Lesson.objects.get(id=id)
+    lesson = get_object_or_404(Lesson, id=id)
 
     video_id = None
-
     if lesson.video_url:
         if "watch?v=" in lesson.video_url:
-            video_id = lesson.video_url.split("watch?v=")[1]
+            video_id = lesson.video_url.split("watch?v=")[1].split('&')[0]
         elif "youtu.be/" in lesson.video_url:
-            video_id = lesson.video_url.split("youtu.be/")[1]
+            video_id = lesson.video_url.split("youtu.be/")[1].split('?')[0]
         else:
             video_id = lesson.video_url
 
@@ -98,26 +89,23 @@ def lesson_view(request, id):
     })
 
 
-def enroll(request,id):
+# ĐĂNG KÝ KHÓA HỌC (version cũ)
+def enroll(request, id):
+    if not request.user.is_authenticated:
+        return redirect('login')
 
-    course = Course.objects.get(id=id)
+    course = get_object_or_404(Course, id=id)
+    Enrollment.objects.get_or_create(user=request.user, course=course)
+    messages.success(request, f'Đăng ký khóa học "{course.title}" thành công!')
+    return redirect('course_detail', course_id=id)
 
-    Enrollment.objects.create(
-        user=request.user,
-        course=course
-    )
-
-    return redirect("/course/"+str(id))
-
-@login_required  # ← THÊM DECORATOR NÀY (bắt buộc đăng nhập)
+@login_required
 def enroll_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    
-    # Kiểm tra nếu đã enroll rồi
+
     enrollment, created = Enrollment.objects.get_or_create(
-        user=request.user,  # giờ an toàn vì đã login_required
-        course=course,
-        defaults={'created': timezone.now()}
+        user=request.user,
+        course=course
     )
     
     if created:
@@ -125,11 +113,10 @@ def enroll_course(request, course_id):
     else:
         messages.info(request, f'Bạn đã đăng ký khóa học này trước đó.')
     
-    # Redirect về trang chi tiết khóa học
     return redirect('course_detail', course_id=course.id)
 
 
-# LOGIN
+# ĐĂNG NHẬP
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -139,7 +126,7 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            return redirect('/')   # 👉 tránh lỗi /accounts/profile/
+            return redirect('/')
         else:
             return render(request, 'login.html', {
                 'error': 'Tên đăng nhập hoặc mật khẩu sai!'
@@ -148,7 +135,7 @@ def login_view(request):
     return render(request, 'login.html')
 
 
-# REGISTER
+# ĐĂNG KÝ
 def register_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -172,14 +159,132 @@ def register_view(request):
             email=email,
             password=password
         )
+        user.save()
 
         login(request, user)
-        return redirect('/')   # 👉 đăng ký xong login luôn
+        messages.success(request, 'Đăng ký thành công! Bạn đã được đăng nhập.')
+        return redirect('/')
 
     return render(request, 'register.html')
 
 
-# LOGOUT
+# ĐĂNG XUẤT
 def logout_view(request):
     logout(request)
-    return redirect('/login/')
+    messages.info(request, 'Bạn đã đăng xuất.')
+    return redirect('login')
+
+
+# === PHẦN ÔN LUYỆN (QUIZ) ===
+@login_required
+def quiz_list(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Kiểm tra enroll - nếu chưa thì redirect
+    if not course.enrollments.filter(user=request.user).exists():
+        messages.warning(request, 'Bạn cần đăng ký khóa học để làm bài tập!')
+        return redirect('course_detail', course_id=course.id)
+    
+    quizzes = course.quizzes.all()
+
+    if not quizzes.exists():
+        messages.info(request, 'Khóa học này chưa có bài ôn luyện nào.')
+    
+    return render(request, 'quiz_list.html', {
+        'course': course,
+        'quizzes': quizzes
+    })
+
+@login_required
+def start_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    
+    if not quiz.course.enrollments.filter(user=request.user).exists():
+        return redirect('course_detail', course_id=quiz.course.id)
+    
+    # Đếm số attempt đã hoàn thành của user cho quiz này
+    previous_attempts = UserQuizAttempt.objects.filter(
+        user=request.user,
+        quiz=quiz,
+        completed=True
+    ).count()
+    
+    if previous_attempts >= 3:  # Giới hạn 3 lần
+        messages.warning(request, 'Bạn đã hết lượt làm lại bài này (tối đa 3 lần).')
+        return redirect('quiz_list', course_id=quiz.course.id)
+    
+    # Tạo attempt mới
+    attempt = UserQuizAttempt.objects.create(
+        user=request.user,
+        quiz=quiz,
+        started_at=timezone.now()
+    )
+    
+    return redirect('take_quiz', attempt_id=attempt.id)
+
+
+@login_required
+def take_quiz(request, attempt_id):
+    attempt = get_object_or_404(UserQuizAttempt, id=attempt_id, user=request.user)
+    quiz = attempt.quiz
+    
+    if attempt.completed:
+        return redirect('quiz_result', attempt_id=attempt.id)
+    
+    questions = quiz.questions.all().order_by('order')
+    
+    if request.method == 'POST':
+        score = 0
+        correct = 0
+        total_points = 0
+        
+        for question in questions:
+            selected_choice_id = request.POST.get(f'question_{question.id}')
+            if selected_choice_id:
+                try:
+                    choice = Choice.objects.get(id=selected_choice_id, question=question)
+                    total_points += question.points
+                    if choice.is_correct:
+                        score += question.points
+                        correct += 1
+                except Choice.DoesNotExist:
+                    pass
+        
+        attempt.score = score
+        attempt.correct_answers = correct
+        attempt.wrong_answers = questions.count() - correct
+        attempt.total_points = total_points
+        attempt.percentage = (score / total_points * 100) if total_points > 0 else 0
+        attempt.finished_at = timezone.now()
+        attempt.completed = True
+        attempt.save()
+        
+        messages.success(request, f'Bạn đã hoàn thành bài tập! Điểm: {attempt.percentage:.1f}%')
+        return redirect('quiz_result', attempt_id=attempt.id)
+    
+    return render(request, 'take_quiz.html', {
+        'attempt': attempt,
+        'quiz': quiz,
+        'questions': questions,
+        'time_limit': quiz.time_limit,
+    })
+
+
+@login_required
+def quiz_result(request, attempt_id):
+    attempt = get_object_or_404(UserQuizAttempt, id=attempt_id, user=request.user)
+    return render(request, 'quiz_result.html', {'attempt': attempt})
+
+@login_required
+def quiz_list_all(request):
+    # Lấy khóa học user đã enroll
+    enrolled_courses = Course.objects.filter(enrollments__user=request.user)  # hoặc enrollments__user
+    quizzes = Quiz.objects.filter(course__in=enrolled_courses).order_by('-created_at')
+    
+    if not quizzes.exists():
+        messages.info(request, 'Bạn chưa có bài ôn luyện nào. Hãy đăng ký khóa học để bắt đầu!')
+    
+    return render(request, 'quiz_list_all.html', {
+        'quizzes': quizzes,
+        'title': 'Ôn Luyện Tất Cả'
+    })

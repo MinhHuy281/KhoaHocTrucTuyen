@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ quiz.title }} - Làm bài{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'take_quiz.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h3 class="fw-bold">{{ quiz.title }}</h3>
+                <p class="text-muted">Bài ôn luyện - {{ quiz.course.title }}</p>
+            </div>
+
+            <!-- Timer nhỏ gọn -->
+            <div class="timer-box text-center mb-4">
+                <div class="timer-circle">
+                    <span id="timerDisplay">{{ quiz.time_limit }}</span>
+                    <span class="timer-label">giây</span>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <form method="post" id="quizForm">
+                {% csrf_token %}
+
+                {% for question in questions %}
+                    <div class="question-box mb-4">
+                        <h5 class="question-title">
+                            Câu {{ forloop.counter }} ({{ question.points }} điểm)
+                        </h5>
+                        <p class="question-text">{{ question.text }}</p>
+
+                        <div class="choices">
+                            {% for choice in question.choices.all %}
+                                <label class="choice-label">
+                                    <input type="radio" 
+                                           name="question_{{ question.id }}" 
+                                           value="{{ choice.id }}" 
+                                           class="choice-radio" required>
+                                    <span class="choice-text">{{ choice.text }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <!-- Nút Nộp bài -->
+                <div class="text-center mt-5">
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        Nộp bài
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Timer countdown đơn giản
+    let timeLeft = {{ quiz.time_limit }};
+    const timerDisplay = document.getElementById('timerDisplay');
+
+    const countdown = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            timerDisplay.textContent = '0';
+            document.getElementById('quizForm').submit();
+        }
+    }, 1000);
+</script>
+{% endblock %}

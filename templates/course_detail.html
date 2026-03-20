@@ -6,43 +6,44 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'course_detail.css' %}">
 {% endblock %}
+
 {% block content %}
 <div class="course-detail">
     <div class="video-section">
-      <div class="video-container">
-          {% if enrolled or lessons.0.is_free_preview %}
-              {% if lessons.0.get_youtube_id %}
-                  <iframe 
-                      width="100%" 
-                      height="500" 
-                      src="https://www.youtube-nocookie.com/embed/{{ lessons.0.get_youtube_id }}?rel=0"
-                      title="{{ lessons.0.title }}"
-                      frameborder="0" 
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                      allowfullscreen
-                      referrerpolicy="strict-origin-when-cross-origin">  <!-- ← THÊM DÒNG NÀY -->
-                  </iframe>
-              {% elif lessons.0.video_file %}
-                  <video controls poster="{% static 'images/video-poster.jpg' %}" class="main-video">
-                      <source src="{{ lessons.0.video_file.url }}" type="video/mp4">
-                      Trình duyệt không hỗ trợ video.
-                  </video>
-              {% else %}
-                  <div class="no-video-message">
-                      <i class="bi bi-play-circle-fill"></i>
-                      <p>Bài học không có video</p>
-                  </div>
-              {% endif %}
-          {% else %}
-              <div class="locked-video">
-                  <div class="lock-overlay">
-                      <i class="bi bi-lock-fill"></i>
-                      <h3>Đăng ký để xem bài giảng</h3>
-                      <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">Đăng ký ngay</a>
-                  </div>
-              </div>
-          {% endif %}
-      </div>
+        <div class="video-container">
+            {% if enrolled or lessons.0.is_free_preview %}
+                {% if lessons.0.get_youtube_id %}
+                    <iframe 
+                        width="100%" 
+                        height="500" 
+                        src="https://www.youtube-nocookie.com/embed/{{ lessons.0.get_youtube_id }}?rel=0"
+                        title="{{ lessons.0.title }}"
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen
+                        referrerpolicy="strict-origin-when-cross-origin">
+                    </iframe>
+                {% elif lessons.0.video_file %}
+                    <video controls poster="{% static 'images/video-poster.jpg' %}" class="main-video">
+                        <source src="{{ lessons.0.video_file.url }}" type="video/mp4">
+                        Trình duyệt không hỗ trợ video.
+                    </video>
+                {% else %}
+                    <div class="no-video-message">
+                        <i class="bi bi-play-circle-fill"></i>
+                        <p>Bài học không có video</p>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="locked-video">
+                    <div class="lock-overlay">
+                        <i class="bi bi-lock-fill"></i>
+                        <h3>Đăng ký để xem bài giảng</h3>
+                        <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">Đăng ký ngay</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
 
         <div class="course-header">
             <h1>{{ course.title }}</h1>
@@ -85,7 +86,15 @@
                 <p class="no-content">Chưa có bài học nào.</p>
             {% endfor %}
         </div>
+
+        <!-- NÚT ÔN LUYỆN - Chỉ hiển thị khi đã đăng ký khóa học -->
+        {% if request.user.is_authenticated %}
+            <div class="mt-5 text-center">
+                <a href="{% url 'quiz_list' course.id %}" class="btn btn-info btn-lg">
+                    <i class="bi bi-journal-text me-2"></i> Ôn Luyện
+                </a>
+            </div>
+        {% endif %}
     </div>
 </div>
-
 {% endblock %}

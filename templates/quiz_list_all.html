@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Ôn Luyện Tất Cả{% endblock %}
+
+{% block extra_css %}
+    <!-- CSS riêng nếu cần -->
+    <style>
+        .quiz-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+        .quiz-title { color: #1e40af; font-weight: bold; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Ôn Luyện - Tất cả bài tập</h2>
+
+    {% if quizzes %}
+        {% for quiz in quizzes %}
+            <div class="quiz-card">
+                <h5 class="quiz-title">{{ quiz.title }}</h5>
+                <p><strong>Khóa học:</strong> {{ quiz.course.title }}</p>
+                <p><strong>Thời gian:</strong> {{ quiz.time_limit|div:60 }} phút</p>
+                <a href="{% url 'start_quiz' quiz.id %}" class="btn btn-primary btn-sm">Bắt đầu làm bài</a>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            Bạn chưa có bài tập nào để ôn luyện. Hãy đăng ký khóa học để bắt đầu!
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

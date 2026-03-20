@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils import timezone
 
 class Level(models.Model):
     name = models.CharField(max_length=50)
@@ -93,9 +93,78 @@ class Lesson(models.Model):
 
 
 class Enrollment(models.Model):
-
-    user = models.ForeignKey(User,on_delete=models.CASCADE)
-
-    course = models.ForeignKey(Course,on_delete=models.CASCADE)
-
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='enrollments'  
+    )
     created = models.DateTimeField(auto_now_add=True, null=True)
+
+class Quiz(models.Model):
+    """Bài tập ôn luyện gắn với một Lesson hoặc Course"""
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='quizzes')
+    lesson = models.ForeignKey('Lesson', on_delete=models.SET_NULL, null=True, blank=True, related_name='quizzes')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    time_limit = models.PositiveIntegerField(default=600)  # Tổng thời gian (giây), ví dụ 10 phút = 600s
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.course.title}"
+
+    class Meta:
+        ordering = ['-created_at']
+
+class Question(models.Model):
+    """Câu hỏi trắc nghiệm"""
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
+    text = models.TextField()  # Nội dung câu hỏi
+    order = models.PositiveIntegerField(default=1)  # Thứ tự câu hỏi
+    points = models.PositiveIntegerField(default=1)  # Điểm cho câu đúng
+
+    def __str__(self):
+        return self.text[:50]
+
+    class Meta:
+        ordering = ['order']
+
+class Choice(models.Model):
+    """Lựa chọn (option) cho câu hỏi"""
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='choices')
+    text = models.CharField(max_length=300)
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.text[:50]
+
+class UserQuizAttempt(models.Model):
+    """Kết quả làm bài của user"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    started_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    score = models.PositiveIntegerField(default=0)  # Tổng điểm đạt được
+    total_points = models.PositiveIntegerField(default=0)  # Tổng điểm có thể đạt
+    correct_answers = models.PositiveIntegerField(default=0)
+    wrong_answers = models.PositiveIntegerField(default=0)
+    percentage = models.FloatField(default=0.0)  # % đúng
+    completed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.quiz.title}"
+
+    def calculate_score(self):
+
+        self.correct_answers = 0
+        self.wrong_answers = 0
+        self.score = 0
+        self.total_points = sum(q.points for q in self.quiz.questions.all())
+
+
+        if self.total_points > 0:
+            self.percentage = (self.score / self.total_points) * 100
+        self.completed = True
+        self.finished_at = timezone.now()
+        self.save()
