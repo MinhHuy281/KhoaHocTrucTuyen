@@ -19,7 +19,9 @@
 
             <input type="password" name="password" placeholder="Mật khẩu" class="auth-input" required>
 
-            <button type="submit" class="auth-btn">Đăng nhập</button>
+            <button type="submit" name="role" value="student" class="auth-btn"> Đăng nhập học sinh </button>
+
+            <button type="submit" name="role" value="teacher" class="auth-btn"> Đăng nhập giảng viên </button>
         </form>
 
         {% if error %}

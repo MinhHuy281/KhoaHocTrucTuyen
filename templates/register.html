@@ -25,7 +25,9 @@
 
             <input type="password" name="password2" placeholder="Nhập lại mật khẩu" class="auth-input" required>
 
-            <button type="submit" class="auth-btn">Đăng ký</button>
+            <button type="submit" name="role" value="student" class="auth-btn"> Đăng ký học viên </button>
+
+            <button type="submit" name="role" value="teacher" class="auth-btn"> Đăng ký giảng viên </button>
         </form>
 
         {% if error %}

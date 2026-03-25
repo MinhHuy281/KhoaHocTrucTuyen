@@ -1,0 +1,71 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Dashboard Giáo Viên{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'style.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO BANNER -->
+<section class="hero">
+  <div class="container hero-container">
+    <div class="hero-text">
+      <h1>Quản lý khóa học của bạn</h1>
+      <p>Tạo và quản lý các khóa học một cách dễ dàng</p>
+      <a href="/teacher/create/" class="btn-primary">Tạo khóa học</a>
+    </div>
+    <div class="hero-image">
+      <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800" alt="Teacher dashboard" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<!-- ❌ BỎ PHẦN MÔN HỌC -->
+
+<!-- KHÓA HỌC CỦA TÔI -->
+<section class="featured-courses">
+  <div class="container">
+    <h2 class="section-title">Khóa học của tôi</h2>
+    
+    <div class="course-grid">
+      {% for course in courses %}
+        <div class="course-card">
+          <div class="course-thumbnail">
+            {% if course.image %}
+              <img src="{{ course.image.url }}" alt="{{ course.title }}">
+            {% else %}
+              <div class="no-image-placeholder">
+                <span>Chưa có ảnh</span>
+              </div>
+            {% endif %}
+            <div class="course-overlay">
+              <span class="course-level">{{ course.level }}</span>
+            </div>
+          </div>
+
+          <div class="course-body">
+            <h3 class="course-title">{{ course.title }}</h3>
+            <p class="course-desc">{{ course.description|truncatewords:20 }}</p>
+
+            <div class="course-meta">
+              <span>Môn: {{ course.subject }}</span>
+              <span>Lớp: {{ course.grade }}</span>
+            </div>
+
+            <div class="course-footer">
+              <span class="price">{{ course.price }} VNĐ</span>
+              <a href="{% url 'teacher_course_detail' course.id %}" class="btn-detail">Xem chi tiết</a>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="no-data">Bạn chưa có khóa học nào.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

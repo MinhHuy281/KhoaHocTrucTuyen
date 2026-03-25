@@ -1,0 +1,129 @@
+/* ===== KHUNG CHÍNH ===== */
+.teacher-container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 10px;
+}
+
+/* ===== BOX FORM ===== */
+.teacher-container form {
+    background: #94acda;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+}
+
+/* ===== TITLE ===== */
+.teacher-container h2 {
+    margin-bottom: 25px;
+    color: #2c3e50;
+    text-align: center;
+}
+
+/* ===== FORM GROUP ===== */
+.teacher-container .form-group {
+    margin-bottom: 18px;
+}
+
+.teacher-container .form-group label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+    color: #333;
+}
+
+/* ===== INPUT ===== */
+.teacher-container .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+/* focus đẹp */
+.teacher-container .form-control:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 5px rgba(52,152,219,0.3);
+}
+
+/* textarea */
+.teacher-container textarea.form-control {
+    min-height: 100px;
+}
+
+/* ===== CHECKBOX ===== */
+.teacher-container input[type="checkbox"] {
+    margin-right: 8px;
+    transform: scale(1.2);
+}
+
+/* ===== BUTTON ===== */
+.teacher-container .btn-primary {
+    background: #3498db;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.teacher-container .btn-primary:hover {
+    background: #2980b9;
+}
+
+/* nút quay lại */
+.teacher-container .btn-secondary {
+    background: #95a5a6;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    margin-left: 10px;
+}
+
+.teacher-container .btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+/* ===== FILE INPUT ===== */
+.teacher-container input[type="file"] {
+    padding: 6px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .teacher-container form {
+        padding: 20px;
+    }
+}
+
+/* ===== COURSE CARD (GIỮ NGUYÊN) ===== */
+.course-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    transition: 0.2s;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* ===== READ MORE ===== */
+.read-more-btn {
+    color: #3498db;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-block;
+    margin-top: 5px;
+    user-select: none;
+}
+
+.read-more-btn:hover {
+    text-decoration: underline;
+}
