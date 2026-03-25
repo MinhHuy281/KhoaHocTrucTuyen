@@ -1,0 +1,30 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}{{ lesson.title }}{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>{{ lesson.title }}</h2>
+
+    <!-- VIDEO -->
+    {% if video_id %}
+        <iframe width="100%" height="500"
+            src="https://www.youtube-nocookie.com/embed/{{ video_id }}"
+            frameborder="0" allowfullscreen>
+        </iframe>
+    {% endif %}
+
+    <hr>
+
+    <!-- NỘI DUNG FULL -->
+    <p>{{ lesson.content }}</p>
+
+    <br>
+
+    <a href="javascript:history.back()" class="btn-secondary">⬅ Quay lại</a>
+
+</div>
+
+{% endblock %}

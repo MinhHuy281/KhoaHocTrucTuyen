@@ -1,0 +1,74 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Quản lý khóa học{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'style.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="teacher-container">
+    <h2 style="margin-bottom:20px;">📚 Khóa học của tôi</h2>
+
+    <a href="/teacher/create/" class="btn-primary" style="margin-bottom:20px; display:inline-block;">
+        ➕ Tạo khóa học
+    </a>
+
+    <div class="course-grid">
+        {% for course in courses %}
+        
+        <!-- 👉 CLICK NGUYÊN CARD -->
+        <a href="/teacher/course/{{ course.id }}/" class="course-link">
+
+            <div class="course-card">
+
+                <!-- ẢNH -->
+                <div class="course-thumbnail">
+                    {% if course.image %}
+                        <img src="{{ course.image.url }}" alt="{{ course.title }}">
+                    {% else %}
+                        <div class="no-image-placeholder">
+                            <span>Chưa có ảnh</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- BODY -->
+                <div class="course-body">
+                    <h3 class="course-title">{{ course.title }}</h3>
+
+                    <p class="course-desc">
+                        {{ course.description|truncatewords:15 }}
+                    </p>
+
+                    <div class="course-meta">
+                        <span>📘 {{ course.subject }}</span>
+                        <span>🎓 {{ course.grade }}</span>
+                    </div>
+
+                    <!-- FOOTER -->
+                    <div class="course-footer">
+
+                        {% if course.is_free %}
+                            <span class="price" style="color:green;">Free</span>
+                        {% else %}
+                            <span class="price">{{ course.price }} VNĐ</span>
+                            
+                        {% endif %}
+                        <a href="{% url 'teacher_course_detail' course.id %}" class="btn-detail">Xem chi tiết</a>
+                    </div>
+                </div>
+
+            </div>
+
+        </a>
+
+        {% empty %}
+            <p>❌ Bạn chưa có khóa học nào</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

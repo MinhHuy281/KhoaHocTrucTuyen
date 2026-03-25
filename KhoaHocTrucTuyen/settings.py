@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
     'courses',
     'accounts',
+    'rest_framework',
 
 ]
 LOGIN_URL = '/login/'

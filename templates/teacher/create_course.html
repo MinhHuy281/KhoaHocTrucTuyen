@@ -1,0 +1,103 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Tạo khóa học{% endblock %}
+
+<!-- ✅ THÊM ĐÚNG CHỖ -->
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'techer.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="teacher-container">
+    <h2>📚 Tạo khóa học mới</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- TIÊU ĐỀ -->
+        <div class="form-group">
+            <label>Tiêu đề khóa học</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+
+        <!-- MÔ TẢ -->
+        <div class="form-group">
+            <label>Mô tả</label>
+            <textarea name="description" class="form-control"></textarea>
+        </div>
+
+        <!-- GIÁ -->
+        <div class="form-group">
+            <label>Giá (VNĐ)</label>
+            <input type="number" name="price" class="form-control" value="0">
+        </div>
+
+        <!-- FREE -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" name="is_free">
+                Khóa học miễn phí
+            </label>
+        </div>
+
+        <!-- ẢNH -->
+        <div class="form-group">
+            <label>Ảnh khóa học</label>
+            <input type="file" name="image" class="form-control">
+        </div>
+
+        <!-- VIDEO -->
+        <div class="form-group">
+            <label>Video giới thiệu (YouTube)</label>
+            <input type="text" name="video_url" class="form-control"
+                   placeholder="https://youtube.com/watch?v=...">
+        </div>
+
+        <!-- NỘI DUNG -->
+        <div class="form-group">
+            <label>Nội dung bài học đầu tiên</label>
+            <textarea name="content" class="form-control"
+                      placeholder="Nhập nội dung bài học..."></textarea>
+        </div>
+
+        <!-- MÔN -->
+        <div class="form-group">
+            <label>Môn học</label>
+            <select name="subject" class="form-control" required>
+                <option value="">-- Chọn môn --</option>
+                {% for s in subjects %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- LỚP -->
+        <div class="form-group">
+            <label>Lớp</label>
+            <select name="grade" class="form-control" required>
+                <option value="">-- Chọn lớp --</option>
+                {% for g in grades %}
+                    <option value="{{ g.id }}">{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- CẤP -->
+        <div class="form-group">
+            <label>Cấp độ</label>
+            <select name="level" class="form-control" required>
+                <option value="">-- Chọn cấp --</option>
+                {% for l in levels %}
+                    <option value="{{ l.id }}">{{ l.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <br>
+
+        <button type="submit" class="btn-primary">➕ Tạo khóa học</button>
+        <a href="/teacher/courses/" class="btn-secondary">⬅ Quay lại</a>
+    </form>
+</div>
+{% endblock %}

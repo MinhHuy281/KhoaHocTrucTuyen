@@ -30,27 +30,34 @@
     <div class="category-grid">
       <div class="category-card">
         <div class="category-icon">📖</div>
-        <h3>Văn Học</h3>
+        <h3><a href="{% url 'courses' %}?subject=3">Văn Học</a></h3>
         <p>Tiếng Việt & Luyện thi</p>
       </div>
       <div class="category-card">
         <div class="category-icon">📐</div>
-        <h3>Toán Học</h3>
+        <h3>
+          <a href="{% url 'courses' %}?subject=1">Toán Học</a>
+        </h3>
         <p>Lớp 1–12 & Luyện thi đại học</p>
       </div>
       <div class="category-card">
         <div class="category-icon">📔</div>
-        <h3>Tiếng Anh</h3>
-        <p>Giao tiếp, Ngữ pháp & Luyện thi</p>
+        <h3>
+          <a href="{% url 'courses' %}?subject=2">Tiếng Anh</a>
+        </h3>
+          <p>Giao tiếp, Ngữ pháp & Luyện thi</p>
+        </a>
       </div>
       <div class="category-card">
         <div class="category-icon">⚛️</div>
-        <h3>Vật Lý</h3>
+        <h3>
+          <a href="{% url 'courses' %}?subject=4">Vật Lý</a>
+        </h3>
         <p>Chuyên sâu & Olympic</p>
       </div>
       <div class="category-card">
         <div class="category-icon">🧪</div>
-        <h3>Hóa Học</h3>
+        <h3><a href="{% url 'courses' %}?subject=5">Hóa Học</a></h3>
         <p>Thí nghiệm & Ứng dụng thực tế</p>
       </div>
     </div>

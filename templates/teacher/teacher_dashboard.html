@@ -1,0 +1,14 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Dashboard Giáo Viên{% endblock %}
+
+{% block content %}
+<h2>👩‍🏫 Dashboard Giáo Viên</h2>
+
+<div style="margin-top:20px;">
+    <p>📚 Tổng khóa học: {{ total_courses }}</p>
+    <p>👨‍🎓 Tổng học viên: {{ total_students }}</p>
+</div>
+
+<a href="/teacher/courses/" class="btn-primary">Quản lý khóa học</a>
+{% endblock %}

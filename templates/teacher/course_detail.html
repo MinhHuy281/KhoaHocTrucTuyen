@@ -1,0 +1,163 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}{{ course.title }} - Giáo viên{% endblock %}
+
+{% block extra_css %}
+
+<link rel="stylesheet" href="{% static 'course_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="course-detail">
+
+```
+<!-- VIDEO -->
+<div class="video-section">
+    <div class="video-container">
+
+        <div class="video-container">
+
+            {% if lessons %}
+                {% with first=lessons.0 %}
+
+                {% if first.get_youtube_id %}
+            <iframe 
+                  width="100%" 
+                  height="500" 
+                  src="https://www.youtube-nocookie.com/embed/{{ lessons.0.get_youtube_id }}?rel=0"
+                  title="{{ lessons.0.title }}"
+                  frameborder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowfullscreen
+                  referrerpolicy="strict-origin-when-cross-origin">
+              </iframe>
+          {% elif lessons.0.video_file %}
+              <video controls poster="{% static 'images/video-poster.jpg' %}" class="main-video">
+                  <source src="{{ lessons.0.video_file.url }}" type="video/mp4">
+                  Trình duyệt không hỗ trợ video.
+              </video>
+          {% else %}
+              <div class="no-video-message">
+                  <i class="bi bi-play-circle-fill"></i>
+                  <p>Bài học không có video</p>
+              </div>
+          {% endif %}
+
+    {% endwith %}
+{% else %}
+    <p>Chưa có bài học</p>
+{% endif %}
+```
+
+</div>
+
+```
+    </div>
+
+    <!-- INFO -->
+    <div class="course-header">
+        <h1>{{ course.title }}</h1>
+
+        <p>{{ course.description|linebreaks }}</p>
+
+        <div class="meta-row">
+            <div>Môn: <strong>{{ course.subject }}</strong></div>
+            <div>Lớp: <strong>{{ course.grade }}</strong></div>
+            <div>Cấp: <strong>{{ course.level }}</strong></div>
+        </div>
+
+        <div class="price-row">
+
+            {% if course.is_free %}
+                <div class="price">Miễn phí</div>
+            {% else %}
+                <div class="price">{{ course.price }} VNĐ</div>
+            {% endif %}
+
+            <div style="display:flex; gap:10px;">
+    
+
+            <a href="{% url 'teacher_edit' course.id %}" class="btn-enroll">
+                ✏️ Chỉnh sửa
+            </a>
+
+            <a href="{% url 'teacher_delete' course.id %}"class="btn-enroll"onclick="return confirm('Bạn có chắc muốn xóa?')">
+                🗑️ Xóa
+            </a>
+
+            <a href="{% url 'create_quiz' course.id %}" class="btn-enroll">
+                📝 Tạo bài ôn tập
+            </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- DANH SÁCH BÀI -->
+
+<div class="lessons-section">
+<h2>Nội dung khóa học ({{ lessons.count }} bài)</h2>
+
+<div class="lesson-list">
+    {% for lesson in lessons %}
+        <div class="lesson-row">
+
+            <div class="lesson-number">
+                {{ forloop.counter }}
+            </div>
+
+            <div class="lesson-info">
+                <h3>{{ lesson.title }}</h3>
+
+                {% if lesson.video_url %}
+                    <span class="video-tag">▶ Có video</span>
+                {% endif %}
+
+                <!-- ✅ FIX -->
+                <p class="lesson-content"
+                   data-full="{{ lesson.content|escapejs }}"
+                   data-short="{{ lesson.content|truncatewords:40|escapejs }}">
+                    {{ lesson.content|truncatewords:40 }}
+                </p>
+
+                <button onclick="toggleContent(this)">Xem thêm</button>
+
+            </div>
+
+        </div>
+    {% empty %}
+        <p>Chưa có bài học nào</p>
+    {% endfor %}
+</div>
+</div>
+{% endblock %}
+
+<!-- ✅ CHỈ THÊM JS NÀY -->
+
+{% block extra_js %}
+<script>
+function toggleContent(btn) {
+    const content = btn.previousElementSibling;
+
+    let fullText = content.getAttribute("data-full");
+    let shortText = content.getAttribute("data-short");
+
+    if (!fullText || !shortText) return;
+
+    fullText = JSON.parse('"' + fullText + '"');
+    shortText = JSON.parse('"' + shortText + '"');
+
+    if (btn.innerText === "Xem thêm") {
+        fullText = fullText.replace(/\r\n|\n|\r/g, "<br>");
+        content.innerHTML = fullText;
+        btn.innerText = "Thu gọn";
+    } else {
+        content.innerText = shortText;
+        btn.innerText = "Xem thêm";
+    }
+}
+</script>
+{% endblock %}
