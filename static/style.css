@@ -291,5 +291,256 @@ footer {
   .section-title { font-size: 2rem; }
   .hero { padding: 80px 0 60px; }
 }
+/* Zalo Chat Button */
+.zalo-chat {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+}
 
+.zalo-chat img {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: white;
+    padding: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: 0.3s;
+}
+
+.zalo-chat img:hover {
+    transform: scale(1.1);
+}
+@keyframes zalo-shake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(5deg); }
+    50% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.zalo-chat img {
+    animation: zalo-shake 0.4s infinite ease-in-out;
+}
+/* Sóng Zalo */
+.zalo-chat{
+    position: fixed;
+}
+
+.zalo-chat::before,
+.zalo-chat::after{
+    content: "";
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(26,115,232,0.35);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: zalo-wave 2s infinite;
+    z-index: -1;
+}
+
+.zalo-chat::after{
+    animation-delay: 1s;
+}
+
+@keyframes zalo-wave{
+    0%{
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.6;
+    }
+    70%{
+        transform: translate(-50%, -50%) scale(1.8);
+        opacity: 0;
+    }
+    100%{
+        opacity: 0;
+    }
+}
+/* Phone Call Button */
+.phone-call {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.phone-call img {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: white;
+    padding: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: 0.3s;
+}
+
+.phone-call img:hover {
+    transform: scale(1.1);
+}
+
+/* rung điện thoại */
+@keyframes phone-shake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(6deg); }
+    50% { transform: rotate(-6deg); }
+    75% { transform: rotate(6deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.phone-call img {
+    animation: phone-shake 0.4s infinite ease-in-out;
+}
+
+/* sóng  */
+.phone-call::before,
+.phone-call::after{
+    content: "";
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(26,115,232,0.35);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: phone-wave 2s infinite;
+    z-index: -1;
+}
+
+.phone-call::after{
+    animation-delay: 1s;
+}
+
+@keyframes phone-wave{
+    0%{
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.6;
+    }
+    70%{
+        transform: translate(-50%, -50%) scale(1.8);
+        opacity: 0;
+    }
+    100%{
+        opacity: 0;
+    }
+}
+.phone-number{
+    position: absolute;
+    right: 70px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgb(12, 12, 12);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    white-space: nowrap;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+}
+/* nút chat */
+/* nút chat giảng viên */
+.chat-button{
+    position: fixed;
+    bottom: 180px;   /* cao hơn nút SĐT */
+    right: 20px;
+    width: 55px;
+    height: 55px;
+    background: #0084ff;
+    color: white;
+    font-size: 26px;
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* khung chat */
+.chat-box{
+    position: fixed;
+    bottom: 235px;  /* nằm ngay phía trên nút chat */
+    right: 20px;
+    width: 300px;
+    height: 380px;
+    background: white;
+    border-radius: 10px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.3);
+    display:none;
+    flex-direction:column;
+}
+
+/* header */
+.chat-header{
+    background:#0084ff;
+    color:white;
+    padding:10px;
+    font-weight:bold;
+    display:flex;
+    justify-content:space-between;
+}
+
+/* nội dung */
+.chat-messages{
+    flex:1;
+    padding:10px;
+    overflow-y:auto;
+    font-size:14px;
+}
+
+/* input */
+.chat-input{
+    display:flex;
+    border-top:1px solid #ddd;
+}
+
+.chat-input input{
+    flex:1;
+    border:none;
+    padding:8px;
+}
+
+.chat-input button{
+    border:none;
+    background:#0084ff;
+    color:white;
+    padding:8px 12px;
+}
+/* Sóng cho nút chat giảng viên */
+.chat-button::before,
+.chat-button::after{
+    content: "";
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(0,132,255,0.35);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: chat-wave 2s infinite;
+    z-index: -1;
+}
+
+.chat-button::after{
+    animation-delay: 1s;
+}
+
+@keyframes chat-wave{
+    0%{
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.6;
+    }
+    70%{
+        transform: translate(-50%, -50%) scale(1.8);
+        opacity: 0;
+    }
+    100%{
+        opacity: 0;
+    }
+}
 
