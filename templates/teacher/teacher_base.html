@@ -34,6 +34,33 @@
         <div class="auth">
             {% if user.is_authenticated %}
                 <div class="user-box">
+
+                    <!-- 🔔 NOTIFICATION -->
+                    <div class="noti-box" onclick="markNotiRead()">
+                        <i class="bi bi-bell"></i>
+
+                        <!-- 🔴 BADGE FIX -->
+                        {% if unread_count > 0 %}
+                            <span class="noti-badge">
+                                {{ unread_count }}
+                            </span>
+                        {% endif %}
+
+                        <div class="noti-dropdown">
+                            <h4>🔔 Thông báo</h4>
+
+                            {% for noti in notifications %}
+                                <div class="noti-item">
+                                    {{ noti.message }}
+                                </div>
+                            {% empty %}
+                                <div class="noti-item">
+                                    Không có thông báo
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <span class="hello">
                         👩‍🏫 Xin chào, <b>{{ user.username }}</b>
                     </span>
@@ -59,23 +86,51 @@
     {% block content %}{% endblock %}
 </div>
 
-<!-- ✅ THÊM DÒNG NÀY -->
-{% block extra_js %}{% endblock %}
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        let cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function markNotiRead() {
+    fetch("/mark-notifications-read/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+            "Content-Type": "application/json"
+        }
+    }).then(() => {
+        location.reload();
+    });
+}
+</script>
+{% endblock %}
 
 <footer>
     © 2026 KhoaHocTrucTuyen - Teacher
 </footer>
-<!-- Zalo Chat Button -->
-    <a href="https://zalo.me/g/1tvnwjmrzbvmjeacin9d" target="_blank" class="zalo-chat">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" alt="Zalo">
-    </a>
-    <!-- Call Phone Button -->
-    <a href="tel:0898314070" class="phone-call">
-        <img src="https://cdn-icons-png.flaticon.com/512/724/724664.png" alt="Call">
-    </a>
-    <a href="tel:0898314070" class="phone-call">
+
+<!-- Zalo -->
+<a href="https://zalo.me/g/1tvnwjmrzbvmjeacin9d" target="_blank" class="zalo-chat">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" alt="Zalo">
+</a>
+
+<!-- Call -->
+<a href="tel:0898314070" class="phone-call">
     <img src="https://cdn-icons-png.flaticon.com/512/724/724664.png" alt="Call">
     <span class="phone-number">0898 314 070</span>
-    </a>
+</a>
+
 </body>
 </html>

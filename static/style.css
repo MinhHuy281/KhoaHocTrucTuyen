@@ -5,7 +5,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background:#f8f9fc; color
 .container { max-width:1280px; margin:0 auto; padding:0 20px; }
 
 .navbar {
-    background:#0f172a; padding:16px 0; color:white;
+    background:#03060b; padding:16px 0; color:white;
 }
 .nav-flex { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; }
 .logo { font-size:24px; font-weight:700; color:white; text-decoration:none; }
@@ -544,3 +544,88 @@ footer {
     }
 }
 
+
+
+/* 🔔 Notification */
+.noti-box {
+  position: relative;
+  margin-right: 15px;
+  cursor: pointer;
+}
+
+.noti-box i {
+  font-size: 20px;
+}
+
+.noti-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 30px;
+  width: 280px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 999;
+
+  /* ✅ FIX MÀU CHỮ */
+  color: #000;
+}
+
+.noti-box:hover .noti-dropdown {
+  display: block;
+}
+
+.noti-item {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+
+  /* ✅ FIX MÀU CHỮ */
+  color: #000;
+}
+
+.noti-item:last-child {
+  border-bottom: none;
+}
+
+/* ✅ FIX CỨNG (tránh bị CSS khác đè) */
+.noti-dropdown * {
+  color: #000 !important;
+}
+
+/* 🔥 BONUS (hover đẹp hơn) */
+.noti-item:hover {
+  background: #f5f5f5;
+}
+
+/* ===== FORCE FIX NOTIFICATION TEXT ===== */
+.noti-dropdown {
+  background: #fff !important;
+}
+
+.noti-dropdown,
+.noti-dropdown * {
+  color: #000 !important;
+  opacity: 1 !important;
+}
+
+/* FIX BADGE ĐÚNG ICON */
+.noti-box {
+  position: relative;
+}
+
+.noti-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: red;
+  color: white;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 50%;
+  font-weight: bold;
+  min-width: 18px;
+  text-align: center;
+}

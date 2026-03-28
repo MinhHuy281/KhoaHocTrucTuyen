@@ -56,4 +56,15 @@ urlpatterns = [
         # ====================== API REST ======================
     # (Tách biệt hoàn toàn với web, không ảnh hưởng code cũ)
     path('api/', include('courses.api.urls')),
+
+
+
+    path('payment/<int:enrollment_id>/', views.payment, name='payment'),
+
+    path('mark-notifications-read/', views.mark_notifications_read),
+    
+
+
+
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

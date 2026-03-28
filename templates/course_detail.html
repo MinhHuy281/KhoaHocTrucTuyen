@@ -11,58 +11,93 @@
 <div class="course-detail">
     <div class="video-section">
         <div class="video-container">
-            {% if enrolled or lessons.0.is_free_preview %}
+
+            {# ✅ FIX: tránh lỗi + bỏ ngoặc #}
+            {% if lessons %}
+
+            {# ===== FIX CHẶN VIDEO: FREE XEM, CÓ PHÍ PHẢI THANH TOÁN ===== #}
+            {% if course.price == 0 or approved %}
+        
                 {% if lessons.0.get_youtube_id %}
                     <iframe 
-                        width="100%" 
-                        height="500" 
-                        src="https://www.youtube-nocookie.com/embed/{{ lessons.0.get_youtube_id }}?rel=0"
-                        title="{{ lessons.0.title }}"
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen
-                        referrerpolicy="strict-origin-when-cross-origin">
+                    width="100%" 
+                    height="500" 
+                    src="https://www.youtube-nocookie.com/embed/{{ lessons.0.get_youtube_id }}?rel=0"
+                    title="{{ lessons.0.title }}"
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen
+                    referrerpolicy="strict-origin-when-cross-origin">
                     </iframe>
+        
                 {% elif lessons.0.video_file %}
                     <video controls poster="{% static 'images/video-poster.jpg' %}" class="main-video">
                         <source src="{{ lessons.0.video_file.url }}" type="video/mp4">
                         Trình duyệt không hỗ trợ video.
                     </video>
+        
                 {% else %}
                     <div class="no-video-message">
                         <i class="bi bi-play-circle-fill"></i>
                         <p>Bài học không có video</p>
                     </div>
                 {% endif %}
+        
             {% else %}
                 <div class="locked-video">
                     <div class="lock-overlay">
                         <i class="bi bi-lock-fill"></i>
                         <h3>Đăng ký để xem bài giảng</h3>
-                        <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">Đăng ký ngay</a>
+                        <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">
+                            Đăng ký ngay
+                        </a>
                     </div>
                 </div>
             {% endif %}
+        
+        {% else %}
+            <div class="no-video-message">
+                <p>Chưa có bài học</p>
+            </div>
+        {% endif %}
         </div>
 
         <div class="course-header">
             <h1>{{ course.title }}</h1>
             <p>{{ course.description|linebreaks|truncatewords:80 }}</p>
+
             <div class="meta-row">
                 <div>Môn: <strong>{{ course.subject.name|default:"-" }}</strong></div>
                 <div>Lớp: <strong>{{ course.grade.name|default:"-" }}</strong></div>
                 <div>Cấp: <strong>{{ course.level.name|default:"-" }}</strong></div>
             </div>
+
             <div class="price-row">
                 <div class="price">
                     {% if course.price == 0 %}Miễn phí{% else %}{{ course.price }} VNĐ{% endif %}
                 </div>
-                {% if enrolled %}
-                    <div class="enrolled">ĐÃ ĐĂNG KÝ</div>
+
+                {# ✅ BUTTON LOGIC CHUẨN #}
+                {% if approved %}
+                    <div class="enrolled">✅ ĐÃ MỞ KHÓA - VÀO HỌC</div>
+
+                {% elif pending %}
+                    <div class="enrolled">⏳ ĐANG XỬ LÝ THANH TOÁN</div>
+
+                {% elif enrolled %}
+                    <a href="{% url 'payment' enrollment.id %}" class="btn-enroll">
+                        💳 THANH TOÁN NGAY
+                    </a>
+
                 {% elif request.user.is_authenticated %}
-                    <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">ĐĂNG KÝ NGAY</a>
+                    <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">
+                        ĐĂNG KÝ NGAY
+                    </a>
+
                 {% else %}
-                    <a href="{% url 'login' %}?next={% url 'course_detail' course.id %}" class="btn-enroll">ĐĂNG NHẬP ĐỂ ĐĂNG KÝ</a>
+                    <a href="{% url 'login' %}?next={% url 'course_detail' course.id %}" class="btn-enroll">
+                        ĐĂNG NHẬP ĐỂ ĐĂNG KÝ
+                    </a>
                 {% endif %}
             </div>
         </div>
@@ -70,15 +105,21 @@
 
     <div class="lessons-section">
         <h2>Nội dung khóa học ({{ lessons.count }} bài)</h2>
+
         <div class="lesson-list">
             {% for lesson in lessons %}
                 <div class="lesson-row">
                     <div class="lesson-number">{{ forloop.counter }}</div>
+
                     <div class="lesson-info">
                         <h3>{{ lesson.title }}</h3>
+
                         {% if lesson.video_file %}
-                            <span class="video-tag"><i class="bi bi-play-fill"></i> Có video</span>
+                            <span class="video-tag">
+                                <i class="bi bi-play-fill"></i> Có video
+                            </span>
                         {% endif %}
+
                         <p>{{ lesson.content|truncatewords:50 }}</p>
                     </div>
                 </div>
@@ -87,8 +128,8 @@
             {% endfor %}
         </div>
 
-        <!-- NÚT ÔN LUYỆN - Chỉ hiển thị khi đã đăng ký khóa học -->
-        {% if request.user.is_authenticated %}
+        {# ✅ CHỈ CHO ÔN LUYỆN KHI ĐÃ DUYỆT #}
+        {% if approved %}
             <div class="mt-5 text-center">
                 <a href="{% url 'quiz_list' course.id %}" class="btn btn-info btn-lg">
                     <i class="bi bi-journal-text me-2"></i> Ôn Luyện
