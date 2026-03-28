@@ -7,11 +7,12 @@ from django.utils import timezone
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
+import re
 
 # Import tất cả model một lần
 from .models import (
     Course, Lesson, Enrollment, Quiz, Question, Choice, UserQuizAttempt,
-    Level, Grade, Subject
+    Level, Grade, Subject, Notification
 )
 
 
@@ -60,62 +61,76 @@ def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     lessons = course.lessons.all().order_by('order')
 
+    enrollment = None
     enrolled = False
+    approved = False
+    pending = False
+
     if request.user.is_authenticated:
-        enrolled = course.enrollments.filter(user=request.user).exists()
+        # ✅ FIX: auto enroll nếu khóa FREE
+        if course.is_free or course.price == 0:
+            enrollment, _ = course.enrollments.get_or_create(
+                user=request.user,
+                defaults={'status': 'approved'}
+            )
+        else:
+            enrollment = course.enrollments.filter(user=request.user).first()
+
+        if enrollment:
+            enrolled = True
+
+            if enrollment and enrollment.status == 'approved':
+                approved = True
+            elif enrollment.status == 'paid':
+                pending = True
 
     return render(request, "course_detail.html", {
         "course": course,
         "lessons": lessons,
+        "enrollment": enrollment,
         "enrolled": enrolled,
+        "approved": approved,
+        "pending": pending
     })
 
-
 # Xem bài học (lesson)
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+import re
+
+@login_required
 def lesson_view(request, id):
     lesson = get_object_or_404(Lesson, id=id)
+    course = lesson.course
 
-    video_id = None
+    # ===== CHECK QUYỀN =====
+    enrollment = course.enrollments.filter(
+        user=request.user,
+        status='approved'   # 🔒 chỉ cho người đã thanh toán
+    ).first()
+
+    # 👉 nếu KHÔNG phải khóa free
+    if course.price > 0 and not enrollment:
+        return redirect('course_detail', course_id=course.id)
+
+    # ===== XỬ LÝ VIDEO YOUTUBE =====
+    video_id = ""
+
     if lesson.video_url:
-        if "watch?v=" in lesson.video_url:
-            video_id = lesson.video_url.split("watch?v=")[1].split('&')[0]
-        elif "youtu.be/" in lesson.video_url:
-            video_id = lesson.video_url.split("youtu.be/")[1].split('?')[0]
+        url = lesson.video_url.strip()
+
+        # bắt mọi dạng link youtube
+        match = re.search(r"(?:v=|youtu\.be/|embed/)([^&?/]+)", url)
+
+        if match:
+            video_id = match.group(1)
         else:
-            video_id = lesson.video_url
+            video_id = url  # fallback nếu nhập sẵn ID
 
     return render(request, "lesson.html", {
         "lesson": lesson,
         "video_id": video_id
     })
-
-
-# ĐĂNG KÝ KHÓA HỌC (version cũ)
-def enroll(request, id):
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    course = get_object_or_404(Course, id=id)
-    Enrollment.objects.get_or_create(user=request.user, course=course)
-    messages.success(request, f'Đăng ký khóa học "{course.title}" thành công!')
-    return redirect('course_detail', course_id=id)
-
-@login_required
-def enroll_course(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-
-    enrollment, created = Enrollment.objects.get_or_create(
-        user=request.user,
-        course=course
-    )
-    
-    if created:
-        messages.success(request, f'Bạn đã đăng ký khóa học "{course.title}" thành công!')
-    else:
-        messages.info(request, f'Bạn đã đăng ký khóa học này trước đó.')
-    
-    return redirect('course_detail', course_id=course.id)
-
 
 # ĐĂNG NHẬP
 def login_view(request):
@@ -203,10 +218,11 @@ def logout_view(request):
 def quiz_list(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
-    # Kiểm tra enroll - nếu chưa thì redirect
-    if not course.enrollments.filter(user=request.user).exists():
-        messages.warning(request, 'Bạn cần đăng ký khóa học để làm bài tập!')
-        return redirect('course_detail', course_id=course.id)
+    # ✅ FIX: khóa free thì cho qua luôn
+    if not (course.is_free or course.price == 0):
+        if not course.enrollments.filter(user=request.user).exists():
+            messages.warning(request, 'Bạn cần đăng ký khóa học để làm bài tập!')
+            return redirect('course_detail', course_id=course.id)
     
     quizzes = course.quizzes.all()
 
@@ -218,33 +234,37 @@ def quiz_list(request, course_id):
         'quizzes': quizzes
     })
 
+
 @login_required
 def start_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    
-    if not quiz.course.enrollments.filter(user=request.user).exists():
-        return redirect('course_detail', course_id=quiz.course.id)
-    
-    # Đếm số attempt đã hoàn thành của user cho quiz này
+    course = quiz.course
+
+    # ✅ FIX: khóa free thì cho qua
+    if not (course.is_free or course.price == 0):
+        if not course.enrollments.filter(user=request.user).exists():
+            messages.warning(request, 'Bạn cần mua khóa học để làm bài!')
+            return redirect('course_detail', course_id=course.id)
+
+    # ✅ Giới hạn số lần làm
     previous_attempts = UserQuizAttempt.objects.filter(
         user=request.user,
         quiz=quiz,
         completed=True
     ).count()
-    
-    if previous_attempts >= 3:  # Giới hạn 3 lần
+
+    if previous_attempts >= 3:
         messages.warning(request, 'Bạn đã hết lượt làm lại bài này (tối đa 3 lần).')
-        return redirect('quiz_list', course_id=quiz.course.id)
-    
-    # Tạo attempt mới
+        return redirect('quiz_list', course_id=course.id)
+
+    # ✅ Tạo attempt
     attempt = UserQuizAttempt.objects.create(
         user=request.user,
         quiz=quiz,
         started_at=timezone.now()
     )
-    
-    return redirect('take_quiz', attempt_id=attempt.id)
 
+    return redirect('take_quiz', attempt_id=attempt.id)
 
 @login_required
 def take_quiz(request, attempt_id):
@@ -300,12 +320,21 @@ def teacher_dashboard(request):
 
     courses = Course.objects.filter(teacher=request.user)
 
-    return render(request, 'teacher/index_teacher.html', {
-    'total_courses': courses.count(),
-    'total_students': 0,
-    'courses': courses
-})
+    # 🔔 ALL NOTIFICATIONS
+    notifications = Notification.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
 
+    # 🔴 UNREAD ONLY
+    unread_notifications = notifications.filter(is_read=False)
+    unread_count = unread_notifications.count()
+
+    return render(request, 'teacher/index_teacher.html', {
+        'courses': courses,
+        'notifications': notifications[:5],
+        'unread_count': unread_count,
+        'unread_notifications': unread_notifications
+    })
 
 @login_required
 def teacher_courses(request):
@@ -507,3 +536,79 @@ def teacher_edit_course(request, id):
 def create_quiz(request, id):
     # xử lý tạo bài ôn tập
     return render(request, 'teacher/create_quiz.html')
+
+
+
+@login_required
+def payment(request, enrollment_id):
+    enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user)
+
+    if request.method == "POST":
+        enrollment.is_paid = True
+        enrollment.status = 'approved'
+        enrollment.save()
+
+        # ===== NOTIFICATION USER =====
+        # Notification.objects.create(
+        #     user=request.user,
+        #     message=f"Bạn đã thanh toán thành công khóa học '{enrollment.course.title}'"
+        # )
+
+        # ===== NOTIFICATION TEACHER (FIX CHUẨN) =====
+        teacher = enrollment.course.teacher
+
+        if teacher and teacher != request.user:
+            Notification.objects.create(
+                user=teacher,
+                message=f"💰 Học viên {request.user.username} đã thanh toán {enrollment.course.price} VNĐ cho khóa học '{enrollment.course.title}'"
+            )
+
+        messages.success(request, "Thanh toán thành công!")
+        return redirect('course_detail', course_id=enrollment.course.id)
+
+    return render(request, 'payment.html', {
+        'enrollment': enrollment
+    })
+
+
+
+@login_required
+def enroll_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    enrollment, created = Enrollment.objects.get_or_create(
+        user=request.user,
+        course=course
+    )
+
+    if request.method == "POST":
+        full_name = request.POST.get("full_name")
+        email = request.POST.get("email")
+        phone = request.POST.get("phone")
+        payment_method = request.POST.get("payment_method")
+
+        # 👉 validate đơn giản
+        if not full_name or not email or not phone or not payment_method:
+            return render(request, 'enroll_confirm.html', {
+                'enrollment': enrollment,
+                'error': 'Vui lòng nhập đầy đủ thông tin!'
+            })
+
+        # 👉 redirect qua payment sau khi nhập xong
+        return redirect('payment', enrollment_id=enrollment.id)
+
+    return render(request, 'enroll_confirm.html', {
+        'enrollment': enrollment
+    })
+
+
+
+@login_required
+def mark_notifications_read(request):
+    if request.method == "POST":
+        Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).update(is_read=True)
+
+        return JsonResponse({'status': 'ok'})

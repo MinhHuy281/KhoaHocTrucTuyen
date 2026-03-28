@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.pay-box {
+    max-width: 650px;
+    margin: 60px auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.pay-title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.pay-info p {
+    margin: 8px 0;
+    font-size: 15px;
+}
+
+.price {
+    font-size: 22px;
+    font-weight: bold;
+    color: #e11d48;
+}
+
+.qr-box {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.qr-box img {
+    width: 230px;
+    margin-top: 10px;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 14px;
+    margin-top: 25px;
+    background: #22c55e;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+</style>
+
+<div class="pay-box">
+
+    <div class="pay-title">💳 Thanh toán khóa học</div>
+
+    <div class="pay-info">
+        <p><strong>Người học:</strong> {{ enrollment.user.username }}</p>
+        <p><strong>Khóa học:</strong> {{ enrollment.course.title }}</p>
+        <p><strong>Số tiền:</strong> 
+            <span class="price">{{ enrollment.course.price }} VNĐ</span>
+        </p>
+    </div>
+
+    <hr>
+
+    <!-- QR DUY NHẤT -->
+    <div class="qr-box">
+        <p><strong>Quét mã để thanh toán</strong></p>
+
+        <img src="https://img.vietqr.io/image/MB-123456789-compact.png?amount={{ enrollment.course.price }}&addInfo=ThanhToan_{{ enrollment.user.username }}_{{ enrollment.course.id }}&accountName=NGUYEN%20VAN%20A">
+        
+        <p style="margin-top:10px;color:#64748b;font-size:14px;">
+            Nội dung: ThanhToan_{{ enrollment.user.username }}_{{ enrollment.course.id }}
+        </p>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn-submit">
+            ✅ Tôi đã thanh toán
+        </button>
+    </form>
+
+</div>
+
+{% endblock %}

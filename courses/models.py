@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+
 from django.utils import timezone
 
 class Level(models.Model):
@@ -34,8 +35,14 @@ class Course(models.Model):
     grade = models.ForeignKey('Grade', on_delete=models.CASCADE)
     level = models.ForeignKey('Level', on_delete=models.CASCADE)
 
-    # ✅ THÊM TEACHER
-    teacher = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    # ✅ FIX NHẸ: thêm related_name (rất quan trọng cho notification & query)
+    teacher = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='courses_teaching'
+    )
 
     image = models.ImageField(
         upload_to='courses/',
@@ -48,7 +55,9 @@ class Course(models.Model):
     is_published = models.BooleanField(default=False, verbose_name="Đã xuất bản")
 
     def __str__(self):
-        return f"{self.title} - {self.teacher}"
+        # ✅ FIX: tránh None
+        teacher_name = self.teacher.username if self.teacher else "No Teacher"
+        return f"{self.title} - {teacher_name}"
 
 
 class Lesson(models.Model):
@@ -93,15 +102,33 @@ class Lesson(models.Model):
 
         return None
 
-
 class Enrollment(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    course = models.ForeignKey(
-        Course,
-        on_delete=models.CASCADE,
-        related_name='enrollments'  
+    STATUS_CHOICES = (
+        ('pending', 'Chờ thanh toán'),
+        ('paid', 'Đã thanh toán'),
+        ('approved', 'Đã duyệt'),
     )
-    created = models.DateTimeField(auto_now_add=True, null=True)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
+
+    created = models.DateTimeField(auto_now_add=True)
+
+    is_paid = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    def __str__(self):
+        return f"{self.user} - {self.course} - {self.status}"
+
+    # ✅ THÊM HÀM NÀY (AUTO DUYỆT)
+    def approve(self):
+        self.is_paid = True
+        self.status = 'approved'
+        self.save()
+
+    # ✅ CHECK QUYỀN HỌC
+    def can_learn(self):
+        return self.status == 'approved'
 
 class Quiz(models.Model):
     """Bài tập ôn luyện gắn với một Lesson hoặc Course"""
@@ -170,3 +197,13 @@ class UserQuizAttempt(models.Model):
         self.completed = True
         self.finished_at = timezone.now()
         self.save()
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.message
