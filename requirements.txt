@@ -1,0 +1,23 @@
+# Django Framework
+Django==5.2.11
+
+# Django REST Framework for API
+djangorestframework==3.14.0
+
+# Modern Admin Interface
+django-jazzmin==2.6.0
+
+# Database
+# SQLite is included with Python, no additional package needed
+
+# Static files (production)
+whitenoise==6.5.0
+
+# Image processing (if needed for user avatars/course images)
+Pillow==10.3.0
+
+# Python decouple for environment variables
+python-decouple==3.8
+
+# Django CORS headers (if you need API CORS support)
+django-cors-headers==4.3.1

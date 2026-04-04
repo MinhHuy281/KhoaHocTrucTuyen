@@ -1,56 +1,11 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'payment.css' %}">
+{% endblock %}
 
 {% block content %}
-<style>
-.pay-box {
-    max-width: 650px;
-    margin: 60px auto;
-    background: #fff;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-
-.pay-title {
-    text-align: center;
-    font-size: 26px;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
-
-.pay-info p {
-    margin: 8px 0;
-    font-size: 15px;
-}
-
-.price {
-    font-size: 22px;
-    font-weight: bold;
-    color: #e11d48;
-}
-
-.qr-box {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.qr-box img {
-    width: 230px;
-    margin-top: 10px;
-}
-
-.btn-submit {
-    width: 100%;
-    padding: 14px;
-    margin-top: 25px;
-    background: #22c55e;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: bold;
-    cursor: pointer;
-}
-</style>
 
 <div class="pay-box">
 

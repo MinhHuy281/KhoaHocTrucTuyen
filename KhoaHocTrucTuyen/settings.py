@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,12 +26,32 @@ SECRET_KEY = 'django-insecure-k!%#&3p9v*-h(_y7*74&fef&&_v40h+)4o7a6sw3rx8^c5-9ok
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Keep host/origin config flexible to avoid admin POST failures (add/edit/delete)
+# when accessing the site through localhost, LAN IP, or a custom dev domain.
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [
+        host.strip()
+        for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
+        if host.strip()
+    ]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "DJANGO_CSRF_TRUSTED_ORIGINS",
+        "http://localhost,http://127.0.0.1,https://localhost,https://127.0.0.1",
+    ).split(",")
+    if origin.strip()
+]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',  # 👈 PHẢI ĐẶT TRƯỚC django.contrib.admin
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -53,6 +74,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    # Custom middlewares
+    'accounts.inject_user_middleware.InjectCurrentUserMiddleware',  # Inject current_user/teacher vào request
+    'accounts.middleware.AdminAccessMiddleware',  # Bảo vệ admin
 ]
 
 ROOT_URLCONF = 'KhoaHocTrucTuyen.urls'
@@ -69,6 +94,10 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'courses.context_processors.menu_data',
+                'accounts.context_processors.auth_context',  # ✅ THÊM
+            ],
+            'builtins': [
+                'courses.templatetags.compat_filters',
             ],
         },
     },
@@ -146,3 +175,119 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Test local: 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/'
+
+
+# ==================== JAZZMIN SETTINGS ====================
+JAZZMIN_SETTINGS = {
+    # Title
+    "site_title": "KhoaHocTrucTuyen Admin",
+    "site_header": "KhoaHocTrucTuyen",
+    "site_brand": "📚 Quản Lý Khóa Học",
+    "site_logo": None,
+    "login_logo": None,
+    "welcome_sign": "Chào mừng đến với trang quản trị",
+    
+    # Copyright
+    "copyright": "KhoaHocTrucTuyen © 2026",
+    
+    # Search model (optional)
+    "search_model": ["courses.Course", "auth.User"],
+    
+    # User menu
+    "user_avatar": None,
+    
+    ############
+    # Top Menu #
+    ############
+    "topmenu_links": [
+        {"name": "Trang chủ", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Xem trang web", "url": "/", "new_window": True},
+        {"model": "auth.User"},
+        {"app": "courses"},
+    ],
+    
+    #############
+    # Side Menu #
+    #############
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    
+    # Custom icons cho apps và models
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        
+        "courses.Course": "fas fa-book",
+        "courses.Lesson": "fas fa-graduation-cap",
+        "courses.Enrollment": "fas fa-user-check",
+        "courses.Level": "fas fa-layer-group",
+        "courses.Grade": "fas fa-star",
+        "courses.Subject": "fas fa-bookmark",
+        "courses.Quiz": "fas fa-question-circle",
+        "courses.Question": "fas fa-question",
+        "courses.Choice": "fas fa-check-square",
+        "courses.UserQuizAttempt": "fas fa-clipboard-check",
+    },
+    
+    # Icons cho các button
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+    
+    #################
+    # Related Modal #
+    #################
+    "related_modal_active": False,
+    
+    #############
+    # UI Tweaks #
+    #############
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+    
+    ###############
+    # Change view #
+    ###############
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {
+        "auth.user": "collapsible",
+        "auth.group": "vertical_tabs"
+    },
+}
+
+# Jazzmin UI Tweaks
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-primary",
+    "accent": "accent-primary",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success"
+    }
+}

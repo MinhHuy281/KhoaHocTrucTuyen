@@ -19,30 +19,31 @@ Xây dựng một website học trực tuyến đơn giản, thân thiện, phù
 
 ## Các tính năng chính
 
-| Module              | Tính năng                                      | Priority     | Sprint   |
-|---------------------|------------------------------------------------|--------------|----------|
-| **Auth**            | Đăng ký, Đăng nhập, Quên mật khẩu              | Must have    | Sprint 1 |
-| **User Profile**    | Cập nhật thông tin cá nhân                     | Must have    | Sprint 1 |
-| **Course**          | Xem danh sách khóa học theo môn/lớp/cấp        | Must have    | Sprint 1 |
-| **Course**          | Tìm kiếm khóa học                              | Must have    | Sprint 1 |
-| **Enrollment**      | Đăng ký / kích hoạt khóa học                   | Must have    | Sprint 2 |
-| **Learning Content**| Xem video bài giảng                            | Must have    | Sprint 2 |
-| **Exercise**        | Làm bài tập ôn luyện                           | Must have    | Sprint 3 |
-| **Exercise**        | Xem điểm số và kết quả làm bài                 | Should have  | Sprint 3 |
-| **Q&A**             | Gửi câu hỏi cho giảng viên                     | Should have  | Sprint 3 |
-| **Q&A**             | Giảng viên trả lời thắc mắc học viên           | Should have  | Sprint 3 |
-| **Instructor**      | Tạo khóa học mới                               | Must have    | Sprint 2 |
-| **Instructor**      | Cập nhật / chỉnh sửa thông tin khóa học        | Must have    | Sprint 2 |
-| **Instructor**      | Quản lý video bài giảng                        | Must have    | Sprint 2 |
-| **Instructor**      | Tạo bài tập và cập nhật đáp án                 | Must have    | Sprint 3 |
-| **Instructor**      | Theo dõi danh sách học viên trong khóa         | Should have  | Sprint 2 |
-| **Payment**         | Thanh toán khóa học                            | Must have    | Sprint 2 |
-| **Admin**           | Quản lý tài khoản người dùng                   | Must have    | Sprint 1 |
-| **Admin**           | Phân quyền người dùng                          | Must have    | Sprint 1 |
-| **Admin**           | Quản lý danh mục môn học, lớp học              | Must have    | Sprint 2 |
-| **Admin**           | Quản lý khóa học                               | Must have    | Sprint 2 |
-| **Admin**           | Quản lý thanh toán                             | Should have  | Sprint 3 |
-| **Admin**           | Thống kê và báo cáo hệ thống                   | Must have    | Sprint 4 |
+| Module           | Tính năng                                     | Priority    | Sprint   |
+|------------------|-----------------------------------------------|-------------|----------|
+| Auth             | Đăng ký, Đăng nhập, Quên mật khẩu             | Must have   | Sprint 1 |
+| User Profile     | Cập nhật thông tin cá nhân                    | Must have   | Sprint 1 |
+| Course           | Xem danh sách khóa học theo môn/lớp/cấp       | Must have   | Sprint 1 |
+| Course           | Tìm kiếm khóa học                             | Must have   | Sprint 1 |
+| Admin            | Quản lý tài khoản người dùng                  | Must have   | Sprint 1 |
+| Admin            | Phân quyền người dùng                         | Must have   | Sprint 1 |
+| Enrollment       | Đăng ký / kích hoạt khóa học                  | Must have   | Sprint 2 |
+| Learning Content | Xem video bài giảng                           | Must have   | Sprint 2 |
+| Instructor       | Tạo khóa học mới                              | Must have   | Sprint 2 |
+| Instructor       | Cập nhật / chỉnh sửa thông tin khóa học       | Must have   | Sprint 2 |
+| Instructor       | Quản lý video bài giảng                       | Must have   | Sprint 2 |
+| Instructor       | Theo dõi danh sách học viên trong khóa        | Should have | Sprint 2 |
+| Payment          | Thanh toán khóa học                           | Must have   | Sprint 2 |
+| Support          | Liên hệ Zalo hỗ trợ                           | Should have | Sprint 2 |
+| Admin            | Quản lý danh mục môn học, lớp học             | Must have   | Sprint 2 |
+| Admin            | Quản lý khóa học                              | Must have   | Sprint 2 |
+| Exercise         | Làm bài tập ôn luyện                          | Must have   | Sprint 3 |
+| Exercise         | Xem điểm số và kết quả làm bài                | Should have | Sprint 3 |
+| Q&A              | Gửi câu hỏi cho giảng viên                    | Should have | Sprint 3 |
+| Q&A              | Giảng viên trả lời thắc mắc học viên          | Should have | Sprint 3 |
+| Instructor       | Tạo bài tập và cập nhật đáp án                | Must have   | Sprint 3 |
+| Admin            | Quản lý thanh toán                            | Should have | Sprint 3 |
+| Admin            | Thống kê và báo cáo hệ thống                  | Must have   | Sprint 4 |
 
 ## Công nghệ sử dụng
 

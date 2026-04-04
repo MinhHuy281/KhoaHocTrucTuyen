@@ -32,7 +32,7 @@
         </form>
 
         <div class="auth">
-            {% if user.is_authenticated %}
+            {% if current_teacher %}
                 <div class="user-box">
 
                     <!-- 🔔 NOTIFICATION -->
@@ -62,7 +62,7 @@
                     </div>
 
                     <span class="hello">
-                        👩‍🏫 Xin chào, <b>{{ user.username }}</b>
+                        👩‍🏫 Xin chào, <b>{{ current_teacher.username }}</b>
                     </span>
 
                     <form action="{% url 'logout' %}" method="post">

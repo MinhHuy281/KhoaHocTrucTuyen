@@ -1,0 +1,59 @@
+/* ===== NOTIFICATION DROPDOWN ===== */
+.noti-box {
+    position: relative;
+    cursor: pointer;
+}
+
+.noti-dropdown {
+    display: none;
+    position: absolute;
+    top: 35px;
+    right: 0;
+    background: #fff;
+    width: 320px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    z-index: 9999;
+    padding: 10px;
+}
+
+.noti-box:hover .noti-dropdown {
+    display: block;
+}
+
+.noti-item {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.noti-item:last-child {
+    border-bottom: none;
+}
+
+/* ===== FIX MESSAGE (QUAN TRỌNG) ===== */
+.message-container {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    width: 400px;
+    max-width: 90%;
+}
+
+.alert {
+    background: #28a745;
+    color: white;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    text-align: center;
+    word-wrap: break-word;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.alert.success { background: #28a745; }
+.alert.error { background: #dc3545; }
+.alert.warning { background: #ffc107; color: black; }
+.alert.info { background: #17a2b8; }

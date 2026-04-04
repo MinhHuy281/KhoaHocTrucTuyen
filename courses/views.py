@@ -9,11 +9,16 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 import re
 
-# Import tất cả model một lần
+# Import models
 from .models import (
     Course, Lesson, Enrollment, Quiz, Question, Choice, UserQuizAttempt,
     Level, Grade, Subject, Notification
 )
+
+# Import accounts
+from accounts.models import UserProfile
+from accounts.auth import SeparateSessionAuth
+from accounts.decorators import teacher_required, student_required
 
 
 # Trang chủ
@@ -98,14 +103,14 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 import re
 
-@login_required
+@student_required
 def lesson_view(request, id):
     lesson = get_object_or_404(Lesson, id=id)
     course = lesson.course
 
     # ===== CHECK QUYỀN =====
     enrollment = course.enrollments.filter(
-        user=request.user,
+        user=request.current_user,
         status='approved'   # 🔒 chỉ cho người đã thanh toán
     ).first()
 
@@ -134,55 +139,66 @@ def lesson_view(request, id):
 
 # ĐĂNG NHẬP
 def login_view(request):
+    """
+    Đăng nhập với SESSION RIÊNG cho User và Teacher
+    Admin đăng nhập tại /admin/login/
+    """
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-
-        role = request.POST.get('role')  # ✅ THÊM
+        role = request.POST.get('role', 'student')
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            login(request, user)
-
-            # ✅ THÊM PHẦN XỬ LÝ GIẢNG VIÊN
-            if role == "teacher":
-                if user.is_staff:
-                    return redirect('/teacher/')
-                else:
-                    return render(request, 'login.html', {
-                        'error': 'Tài khoản này không phải giảng viên!'
-                    })
-
-            return redirect('/')   # 👉 giữ nguyên
+            if role == 'teacher':
+                # Kiểm tra xem có phải teacher không
+                try:
+                    if hasattr(user, 'profile') and user.profile.is_teacher():
+                        # ✅ Đăng nhập với SESSION RIÊNG cho teacher
+                        SeparateSessionAuth.login_teacher(request, user)
+                        messages.success(request, f'👋 Chào mừng giảng viên {user.username}!')
+                        return redirect('/teacher/')
+                    else:
+                        messages.error(request, '❌ Tài khoản này không phải giảng viên!')
+                        return render(request, 'login.html')
+                except:
+                    messages.error(request, '❌ Tài khoản này không phải giảng viên!')
+                    return render(request, 'login.html')
+            else:
+                # ✅ Đăng nhập với SESSION RIÊNG cho user
+                SeparateSessionAuth.login_user(request, user)
+                messages.success(request, f'👋 Chào mừng {user.username}!')
+                return redirect('/')
         else:
-            return render(request, 'login.html', {
-                'error': 'Tên đăng nhập hoặc mật khẩu sai!'
-            })
+            messages.error(request, '❌ Tên đăng nhập hoặc mật khẩu sai!')
+            return render(request, 'login.html')
 
     return render(request, 'login.html')
 
 
 # ĐĂNG KÝ
 def register_view(request):
+    """Đăng ký tài khoản User hoặc Teacher"""
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
         phone = request.POST.get('phone')
         password = request.POST.get('password')
         password2 = request.POST.get('password2')
-
-        role = request.POST.get('role')  # ✅ THÊM DÒNG NÀY
+        role = request.POST.get('role', 'student')
 
         if password != password2:
-            return render(request, 'register.html', {
-                'error': 'Mật khẩu không khớp!'
-            })
+            messages.error(request, '❌ Mật khẩu không khớp!')
+            return render(request, 'register.html')
 
         if User.objects.filter(username=username).exists():
-            return render(request, 'register.html', {
-                'error': 'Tên đăng nhập đã tồn tại!'
-            })
+            messages.error(request, '❌ Tên đăng nhập đã tồn tại!')
+            return render(request, 'register.html')
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, '❌ Email đã được sử dụng!')
+            return render(request, 'register.html')
 
         user = User.objects.create_user(
             username=username,
@@ -190,37 +206,47 @@ def register_view(request):
             password=password
         )
 
-        # ✅ THÊM PHÂN QUYỀN (KHÔNG ẢNH HƯỞNG CODE CŨ)
-        if role == "teacher":
+        UserProfile.objects.create(
+            user=user,
+            role=role,
+            phone=phone if phone else ''
+        )
+
+        if role == 'teacher':
             user.is_staff = True
             user.save()
-
-        login(request, user)
-
-        # ✅ THÊM REDIRECT RIÊNG
-        if role == "teacher":
+            messages.success(request, '✅ Đăng ký giảng viên thành công!')
+            # ✅ Auto login với SESSION RIÊNG
+            SeparateSessionAuth.login_teacher(request, user)
             return redirect('/teacher/')
-
-        return redirect('/')   # 👉 giữ nguyên
+        else:
+            messages.success(request, '✅ Đăng ký học viên thành công!')
+            # ✅ Auto login với SESSION RIÊNG
+            SeparateSessionAuth.login_user(request, user)
+            return redirect('/')
 
     return render(request, 'register.html')
 
 
 # ĐĂNG XUẤT
 def logout_view(request):
-    logout(request)
+    """Đăng xuất - xóa cả 2 session"""
+    SeparateSessionAuth.logout_user(request)
+    SeparateSessionAuth.logout_teacher(request)
+    messages.success(request, '👋 Đã đăng xuất!')
+    return redirect('/')
     messages.info(request, 'Bạn đã đăng xuất.')
     return redirect('login')
 
 
 # === PHẦN ÔN LUYỆN (QUIZ) ===
-@login_required
+@student_required
 def quiz_list(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
     # ✅ FIX: khóa free thì cho qua luôn
     if not (course.is_free or course.price == 0):
-        if not course.enrollments.filter(user=request.user).exists():
+        if not course.enrollments.filter(user=request.current_user).exists():
             messages.warning(request, 'Bạn cần đăng ký khóa học để làm bài tập!')
             return redirect('course_detail', course_id=course.id)
     
