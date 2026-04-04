@@ -141,6 +141,23 @@ footer {
   gap: 28px;
 }
 
+.teacher-container .course-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+  justify-items: stretch;
+  align-items: start;
+}
+
+.teacher-container {
+  max-width: 1280px !important;
+}
+
+.course-link {
+  display: block;
+}
+
 .course-card {
   background: white;
   border-radius: 16px;
@@ -285,11 +302,17 @@ footer {
   .hero-container { flex-direction: column; text-align: center; }
   .hero-image { max-width: 400px; }
   .hero-text h1 { font-size: 2.8rem; }
+  .teacher-container .course-grid {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
   .section-title { font-size: 2rem; }
   .hero { padding: 80px 0 60px; }
+  .teacher-container .course-grid {
+    grid-template-columns: 1fr;
+  }
 }
 /* Zalo Chat Button */
 .zalo-chat {
@@ -628,4 +651,8 @@ footer {
   font-weight: bold;
   min-width: 18px;
   text-align: center;
+}
+.teacher-course-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
 }

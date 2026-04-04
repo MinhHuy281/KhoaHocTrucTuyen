@@ -53,6 +53,11 @@ urlpatterns = [
     
     path('teacher/course/<int:id>/quiz/create/', views.create_quiz, name='create_quiz'),
 
+    path('teacher/quizzes/', views.teacher_quiz_results, name='teacher_quiz_results'),
+    
+    path('teacher/attempt/<int:attempt_id>/', views.teacher_attempt_detail, name='teacher_attempt_detail'),
+
+
         # ====================== API REST ======================
     # (Tách biệt hoàn toàn với web, không ảnh hưởng code cũ)
     path('api/', include('courses.api.urls')),

@@ -1,0 +1,225 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Chi tiết bài làm{% endblock %}
+
+{% block extra_css %}
+<style>
+
+.container-teacher{
+background:white;
+padding:30px;
+border-radius:10px;
+}
+
+.attempt-header{
+background:linear-gradient(135deg,#667eea,#764ba2);
+color:white;
+padding:25px;
+border-radius:10px;
+margin-bottom:30px;
+}
+
+.score-display{
+display:flex;
+gap:40px;
+margin-top:20px;
+align-items:center;
+}
+
+.percentage-circle{
+width:120px;
+height:120px;
+border-radius:50%;
+background:rgba(255,255,255,0.2);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:42px;
+font-weight:bold;
+border:3px solid white;
+}
+
+.score-item{
+text-align:center;
+}
+
+.score-item .value{
+font-size:32px;
+font-weight:bold;
+}
+
+.question-review{
+border:1px solid #ddd;
+border-radius:8px;
+padding:20px;
+margin-bottom:20px;
+}
+
+.question-review.correct{
+border-left:5px solid #28a745;
+background:#f0fff4;
+}
+
+.question-review.incorrect{
+border-left:5px solid #dc3545;
+background:#fff5f5;
+}
+
+.choice-item{
+display:flex;
+justify-content:space-between;
+padding:10px;
+margin:6px 0;
+background:white;
+border-radius:5px;
+}
+
+.selected-by-student{
+background:#e3f2fd;
+border-left:4px solid #2196f3;
+}
+
+.is-correct{
+background:#e8f5e9;
+border-left:4px solid #4caf50;
+}
+
+.label{
+padding:3px 6px;
+border-radius:4px;
+font-size:12px;
+color:white;
+}
+
+.label-correct{
+background:#28a745;
+}
+
+.label-selected{
+background:#2196f3;
+}
+
+.btn-back{
+display:inline-block;
+margin-top:20px;
+padding:10px 20px;
+background:#6c757d;
+color:white;
+text-decoration:none;
+border-radius:5px;
+}
+
+</style>
+{% endblock %}
+
+
+
+{% block content %}
+
+<div class="container-teacher">
+
+<!-- HEADER -->
+
+<div class="attempt-header">
+
+<h2>📊 Chi tiết bài làm</h2>
+
+<p>
+<strong>Học viên:</strong> {{ attempt.user.username }} <br>
+<strong>Bài tập:</strong> {{ attempt.quiz.title }} <br>
+<strong>Khóa học:</strong> {{ attempt.quiz.course.title }} <br>
+<strong>Thời gian nộp:</strong> {{ attempt.finished_at|date:"d/m/Y H:i" }}
+</p>
+
+<div class="score-display">
+
+<div class="percentage-circle">
+{{ attempt.percentage|floatformat:0 }}%
+</div>
+
+<div class="score-item">
+<div class="value">{{ attempt.score }}/{{ attempt.total_points }}</div>
+<div>Điểm</div>
+</div>
+
+<div class="score-item">
+<div class="value">{{ attempt.correct_answers }}</div>
+<div>Câu đúng</div>
+</div>
+
+<div class="score-item">
+<div class="value">{{ attempt.wrong_answers }}</div>
+<div>Câu sai</div>
+</div>
+
+</div>
+
+</div>
+
+
+
+<h3 style="margin-bottom:20px;border-bottom:2px solid #667eea;padding-bottom:10px;">
+📝 Chi tiết câu trả lời
+</h3>
+
+
+{% if answers %}
+
+{% for answer in answers %}
+
+<div class="question-review {% if answer.is_correct %}correct{% else %}incorrect{% endif %}">
+
+<h5>
+Câu {{ forloop.counter }}: {{ answer.question.text }}
+</h5>
+
+
+{% for choice in answer.question.choices.all %}
+
+<div class="choice-item
+{% if answer.selected_choice and choice.id == answer.selected_choice.id %}selected-by-student{% endif %}
+{% if choice.is_correct %}is-correct{% endif %}
+">
+
+<div>
+<strong>{{ forloop.counter }}.</strong>
+{{ choice.text }}
+</div>
+
+<div>
+
+{% if answer.selected_choice and choice.id == answer.selected_choice.id %}
+<span class="label label-selected">👤 Học viên chọn</span>
+{% endif %}
+
+{% if choice.is_correct %}
+<span class="label label-correct">✔ Đáp án đúng</span>
+{% endif %}
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endfor %}
+
+{% else %}
+
+<p style="padding:20px;background:#fff3cd;border-radius:6px;">
+⚠️ Không có dữ liệu câu trả lời
+</p>
+
+{% endif %}
+
+
+<a href="{% url 'teacher_quiz_results' %}" class="btn-back">
+⬅ Quay lại danh sách
+</a>
+
+</div>
+
+{% endblock %}

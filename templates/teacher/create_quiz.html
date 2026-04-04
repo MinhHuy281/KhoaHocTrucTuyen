@@ -4,69 +4,138 @@
 {% block title %}Tạo bài ôn tập{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/quiz.css' %}">
+<link rel="stylesheet" href="{% static 'quiz.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container">
 
-    <h2>📝 Tạo bài ôn tập</h2>
+<h2>📝 Tạo bài ôn tập</h2>
 
-    <form method="POST">
-        {% csrf_token %}
+<form method="POST">
+{% csrf_token %}
 
-        <div class="form-group">
-            <label>Tiêu đề bài ôn tập</label>
-            <input type="text" name="title" class="form-control" required>
-        </div>
+<!-- chọn môn học -->
+<div class="form-group">
+<label>Chọn bài học</label>
+<select name="lesson_id" class="form-control" required>
+<option value="">-- Chọn bài học --</option>
 
-        <hr>
+{% for lesson in lessons %}
+<option value="{{lesson.id}}">
+{{lesson.title}}
+</option>
+{% endfor %}
 
-        <div class="form-group">
-            <label>Câu hỏi</label>
-            <textarea name="question" class="form-control" rows="3" required></textarea>
-        </div>
-
-        <div class="form-group">
-            <label>Đáp án A</label>
-            <input type="text" name="option_a" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label>Đáp án B</label>
-            <input type="text" name="option_b" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label>Đáp án C</label>
-            <input type="text" name="option_c" class="form-control">
-        </div>
-
-        <div class="form-group">
-            <label>Đáp án D</label>
-            <input type="text" name="option_d" class="form-control">
-        </div>
-
-        <div class="form-group">
-            <label>Chọn đáp án đúng</label>
-            <select name="correct_answer" class="form-control" required>
-                <option value="">-- Chọn --</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-            </select>
-        </div>
-
-        <br>
-
-        <button type="submit" class="btn btn-success">
-            💾 Lưu bài ôn tập
-        </button>
-
-        <a href="{% url 'teacher_courses' %}" class="btn btn-secondary">
-            ⬅️ Quay lại
-        </a>
-    </form>
+</select>
 </div>
+
+<div class="form-group">
+<label>Tiêu đề bài ôn tập</label>
+<input type="text" name="title" class="form-control" required>
+</div>
+
+<hr>
+
+<!-- danh sách câu hỏi -->
+<div id="questions">
+
+<div class="question-item">
+
+<h4>Câu hỏi 1</h4>
+
+<label>Câu hỏi</label>
+<textarea name="question[]" class="form-control" required></textarea>
+
+<label>Đáp án A</label>
+<input type="text" name="option_a[]" class="form-control" required>
+
+<label>Đáp án B</label>
+<input type="text" name="option_b[]" class="form-control" required>
+
+<label>Đáp án C</label>
+<input type="text" name="option_c[]" class="form-control">
+
+<label>Đáp án D</label>
+<input type="text" name="option_d[]" class="form-control">
+
+<label>Đáp án đúng</label>
+<select name="correct_answer[]" class="form-control" required>
+<option value="">-- Chọn --</option>
+<option value="A">A</option>
+<option value="B">B</option>
+<option value="C">C</option>
+<option value="D">D</option>
+</select>
+
+</div>
+
+</div>
+
+<br>
+
+<button type="button" onclick="addQuestion()" class="btn btn-primary">
+➕ Thêm câu hỏi
+</button>
+
+<br><br>
+
+<button type="submit" class="btn btn-success">
+💾 Lưu bài ôn tập
+</button>
+
+<a href="{% url 'teacher_courses' %}" class="btn btn-secondary">
+⬅️ Quay lại
+</a>
+
+</form>
+</div>
+
+<script>
+
+let questionCount = 1;
+
+function addQuestion(){
+
+questionCount++;
+
+let html = `
+<div class="question-item">
+<hr>
+
+<h4>Câu hỏi ${questionCount}</h4>
+
+<label>Câu hỏi</label>
+<textarea name="question[]" class="form-control" required></textarea>
+
+<label>Đáp án A</label>
+<input type="text" name="option_a[]" class="form-control" required>
+
+<label>Đáp án B</label>
+<input type="text" name="option_b[]" class="form-control" required>
+
+<label>Đáp án C</label>
+<input type="text" name="option_c[]" class="form-control">
+
+<label>Đáp án D</label>
+<input type="text" name="option_d[]" class="form-control">
+
+<label>Đáp án đúng</label>
+<select name="correct_answer[]" class="form-control" required>
+<option value="">-- Chọn --</option>
+<option value="A">A</option>
+<option value="B">B</option>
+<option value="C">C</option>
+<option value="D">D</option>
+</select>
+
+</div>
+`;
+
+document.getElementById("questions").insertAdjacentHTML("beforeend", html);
+
+}
+
+</script>
+
 {% endblock %}
