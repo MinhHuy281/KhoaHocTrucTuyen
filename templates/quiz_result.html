@@ -37,6 +37,11 @@
         </p>
 
         <div class="btn-group">
+            <!-- Nút Xem chi tiết câu trả lời -->
+            <button type="button" class="btn btn-custom btn-review" onclick="toggleReview()">
+                <i class="bi bi-eye me-2"></i> Xem chi tiết câu trả lời
+            </button>
+
             <!-- Nút Làm lại bài này -->
             <a href="{% url 'start_quiz' attempt.quiz.id %}" class="btn btn-custom btn-retry">
                 <i class="bi bi-arrow-repeat me-2"></i> Làm lại bài này
@@ -48,5 +53,93 @@
             </a>
         </div>
     </div>
+
+    <!-- Chi tiết câu trả lời -->
+    <div id="reviewSection" class="review-section" style="display: none;">
+        <h3>Chi tiết câu trả lời</h3>
+        {% for answer in answers %}
+            <div class="question-review {% if answer.is_correct %}correct{% else %}incorrect{% endif %}">
+                <h5>Câu {{ forloop.counter }}: {{ answer.question.text }}</h5>
+                <p><strong>Đáp án của bạn:</strong> 
+                    {% if answer.selected_choice %}
+                        {{ answer.selected_choice.text }}
+                        {% if answer.is_correct %}
+                            <span class="badge-correct">✓ Đúng</span>
+                        {% else %}
+                            <span class="badge-incorrect">✗ Sai</span>
+                        {% endif %}
+                    {% else %}
+                        <em>Không chọn</em> <span class="badge-incorrect">✗ Sai</span>
+                    {% endif %}
+                </p>
+                {% if not answer.is_correct %}
+                    <p><strong>Đáp án đúng:</strong> 
+                        {% for choice in answer.question.choices.all %}
+                            {% if choice.is_correct %}
+                                {{ choice.text }}
+                            {% endif %}
+                        {% endfor %}
+                    </p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
 </div>
+
+<script>
+function toggleReview() {
+    const section = document.getElementById('reviewSection');
+    const button = document.querySelector('.btn-review');
+    
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        button.innerHTML = '<i class="bi bi-eye-slash me-2"></i> Ẩn chi tiết';
+    } else {
+        section.style.display = 'none';
+        button.innerHTML = '<i class="bi bi-eye me-2"></i> Xem chi tiết câu trả lời';
+    }
+}
+</script>
+
+<style>
+.review-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.question-review {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.question-review.correct {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+}
+
+.question-review.incorrect {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+}
+
+.badge-correct {
+    background: #28a745;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.badge-incorrect {
+    background: #dc3545;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+</style>
+
 {% endblock %}

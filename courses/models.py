@@ -140,6 +140,13 @@ class Quiz(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def minutes(self):
+        """Trả về thời lượng bài ôn luyện theo phút (làm tròn lên)."""
+        if self.time_limit <= 0:
+            return 0
+        return (self.time_limit + 59) // 60
+
     def __str__(self):
         return f"{self.title} - {self.course.title}"
 
@@ -197,6 +204,17 @@ class UserQuizAttempt(models.Model):
         self.completed = True
         self.finished_at = timezone.now()
         self.save()
+
+
+class UserAnswer(models.Model):
+    """Câu trả lời của user cho từng câu hỏi"""
+    attempt = models.ForeignKey(UserQuizAttempt, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    selected_choice = models.ForeignKey(Choice, on_delete=models.CASCADE, null=True, blank=True)
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.attempt.user.username} - {self.question.text[:30]}"
 
 
 class Notification(models.Model):

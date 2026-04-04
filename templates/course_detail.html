@@ -16,7 +16,7 @@
             {% if lessons %}
 
             {# ===== FIX CHẶN VIDEO: FREE XEM, CÓ PHÍ PHẢI THANH TOÁN ===== #}
-            {% if course.price == 0 or approved %}
+            {% if course.price == 0 or approved or lessons.0.is_free_preview %}
         
                 {% if lessons.0.get_youtube_id %}
                     <iframe 
@@ -129,7 +129,7 @@
         </div>
 
         {# ✅ CHỈ CHO ÔN LUYỆN KHI ĐÃ DUYỆT #}
-        {% if approved %}
+        {% if enrolled %}
             <div class="mt-5 text-center">
                 <a href="{% url 'quiz_list' course.id %}" class="btn btn-info btn-lg">
                     <i class="bi bi-journal-text me-2"></i> Ôn Luyện

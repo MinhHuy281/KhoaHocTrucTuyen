@@ -2,7 +2,7 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'Segoe UI', system-ui, sans-serif; background:#f8f9fc; color:#222; line-height:1.6; }
 
-.container { max-width:1280px; margin:0 auto; padding:0 20px; }
+.container { max-width:1400px; margin:0 auto; padding:0 20px; }
 
 .navbar {
     background:#0f172a; padding:16px 0; color:white;
@@ -141,6 +141,24 @@ footer {
   gap: 28px;
 }
 
+.teacher-container .course-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+  gap: 28px;
+  justify-items: stretch;
+  align-items: start;
+}
+
+.teacher-container {
+  max-width: 1400px !important;
+}
+
+
+.course-link {
+  display: block;
+}
+
 .course-card {
   background: white;
   border-radius: 16px;
@@ -156,7 +174,7 @@ footer {
 
 .course-thumbnail {
   position: relative;
-  height: 200px;
+  height: 140px;
   overflow: hidden;
 }
 
@@ -184,28 +202,28 @@ footer {
 }
 
 .course-body {
-  padding: 24px;
+  padding: 14px;
 }
 
 .course-title {
-  font-size: 1.4rem;
-  margin-bottom: 0.8rem;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
   color: #1e293b;
 }
 
 .course-desc {
   color: #64748b;
-  font-size: 0.95rem;
-  margin-bottom: 1.2rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  margin-bottom: 0.8rem;
+  line-height: 1.4;
 }
 
 .course-meta {
   display: flex;
-  gap: 12px;
-  font-size: 0.9rem;
+  gap: 10px;
+  font-size: 0.8rem;
   color: #64748b;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.8rem;
 }
 
 .course-footer {

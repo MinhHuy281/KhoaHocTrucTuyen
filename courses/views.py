@@ -11,7 +11,7 @@ import re
 
 # Import models
 from .models import (
-    Course, Lesson, Enrollment, Quiz, Question, Choice, UserQuizAttempt,
+    Course, Lesson, Enrollment, Quiz, Question, Choice, UserQuizAttempt, UserAnswer,
     Level, Grade, Subject, Notification
 )
 
@@ -99,10 +99,6 @@ def course_detail(request, course_id):
     })
 
 # Xem bài học (lesson)
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-import re
-
 @student_required
 def lesson_view(request, id):
     lesson = get_object_or_404(Lesson, id=id)
@@ -111,11 +107,11 @@ def lesson_view(request, id):
     # ===== CHECK QUYỀN =====
     enrollment = course.enrollments.filter(
         user=request.current_user,
-        status='approved'   # 🔒 chỉ cho người đã thanh toán
+        status='approved'   # 🔒 chỉ cho người đã duyệt
     ).first()
 
-    # 👉 nếu KHÔNG phải khóa free
-    if course.price > 0 and not enrollment:
+    # 👉 nếu KHÔNG phải khóa miễn phí và không phải bài xem thử
+    if not (course.is_free or course.price == 0 or lesson.is_free_preview or enrollment):
         return redirect('course_detail', course_id=course.id)
 
     # ===== XỬ LÝ VIDEO YOUTUBE =====
@@ -309,15 +305,27 @@ def take_quiz(request, attempt_id):
         
         for question in questions:
             selected_choice_id = request.POST.get(f'question_{question.id}')
+            selected_choice = None
+            is_correct = False
+            
             if selected_choice_id:
                 try:
-                    choice = Choice.objects.get(id=selected_choice_id, question=question)
+                    selected_choice = Choice.objects.get(id=selected_choice_id, question=question)
                     total_points += question.points
-                    if choice.is_correct:
+                    if selected_choice.is_correct:
                         score += question.points
                         correct += 1
+                        is_correct = True
                 except Choice.DoesNotExist:
                     pass
+            
+            # Lưu câu trả lời
+            UserAnswer.objects.create(
+                attempt=attempt,
+                question=question,
+                selected_choice=selected_choice,
+                is_correct=is_correct
+            )
         
         attempt.score = score
         attempt.correct_answers = correct
@@ -384,8 +392,29 @@ def teacher_create_course(request):
         description = request.POST.get('description')
         price = request.POST.get('price')
         subject_id = request.POST.get('subject')
+        new_subject_name = request.POST.get('new_subject', '').strip()
         grade_id = request.POST.get('grade')
         level_id = request.POST.get('level')
+
+        # Nếu nhập môn mới, tạo Subject mới hoặc dùng lại nếu đã tồn tại
+        if new_subject_name:
+            subject_obj, _ = Subject.objects.get_or_create(
+                name__iexact=new_subject_name,
+                defaults={'name': new_subject_name}
+            )
+            subject_id = subject_obj.id
+
+        # Yêu cầu phải có môn học
+        if not subject_id:
+            subjects = Subject.objects.all()
+            grades = Grade.objects.all()
+            levels = Level.objects.all()
+            return render(request, 'teacher/create_course.html', {
+                'subjects': subjects,
+                'grades': grades,
+                'levels': levels,
+                'error': 'Vui lòng chọn môn học hoặc nhập tên môn mới.'
+            })
 
         # ✅ THÊM
         is_free = request.POST.get('is_free') == 'on'
@@ -468,7 +497,11 @@ def teacher_edit_course(request, id):
 @login_required
 def quiz_result(request, attempt_id):
     attempt = get_object_or_404(UserQuizAttempt, id=attempt_id, user=request.user)
-    return render(request, 'quiz_result.html', {'attempt': attempt})
+    answers = attempt.answers.all().select_related('question', 'selected_choice')
+    return render(request, 'quiz_result.html', {
+        'attempt': attempt,
+        'answers': answers
+    })
 
 @login_required
 def quiz_list_all(request):
@@ -504,6 +537,49 @@ def teacher_course_detail(request, id):
         'course': course,
         'lessons': lessons
     })
+
+@login_required
+def teacher_quiz_results(request):
+    if not request.user.is_staff:
+        return redirect('/')
+
+    # Lấy tất cả quiz của teacher
+    quizzes = Quiz.objects.filter(course__teacher=request.user).select_related('course')
+
+    # Lấy attempts cho mỗi quiz
+    quiz_data = []
+    for quiz in quizzes:
+        attempts = UserQuizAttempt.objects.filter(quiz=quiz).select_related('user').order_by('-finished_at')
+        quiz_data.append({
+            'quiz': quiz,
+            'attempts': attempts
+        })
+
+    return render(request, 'teacher/quiz_results.html', {
+        'quiz_data': quiz_data
+    })
+
+@login_required
+def teacher_attempt_detail(request, attempt_id):
+    """Xem chi tiết câu trả lời của học viên"""
+    if not request.user.is_staff:
+        return redirect('/')
+
+    # Lấy attempt và kiểm tra quyền (phải là teacher của quiz này)
+    attempt = get_object_or_404(UserQuizAttempt, id=attempt_id)
+    
+    # Kiểm tra xem người dùng có phải là teacher của khóa học chứa quiz này không
+    if attempt.quiz.course.teacher != request.user:
+        return redirect('/')
+
+    # Lấy tất cả câu trả lời của attempt
+    answers = attempt.answers.all().select_related('question', 'selected_choice')
+
+    return render(request, 'teacher/attempt_detail.html', {
+        'attempt': attempt,
+        'answers': answers
+    })
+
 @login_required
 def teacher_edit_course(request, id):
     if not request.user.is_staff:
@@ -558,11 +634,72 @@ def teacher_edit_course(request, id):
         'grades': grades,
         'levels': levels
     })
+
 @login_required
 def create_quiz(request, id):
-    # xử lý tạo bài ôn tập
-    return render(request, 'teacher/create_quiz.html')
 
+    course = Course.objects.get(id=id)
+    lessons = Lesson.objects.filter(course=course)
+
+    if request.method == "POST":
+
+        lesson_id = request.POST.get("lesson_id")
+        title = request.POST.get("title")
+
+        lesson = Lesson.objects.get(id=lesson_id)
+
+        # tạo quiz
+        quiz = Quiz.objects.create(
+            course=course,
+            lesson=lesson,
+            title=title
+        )
+
+        questions = request.POST.getlist("question[]")
+        option_a = request.POST.getlist("option_a[]")
+        option_b = request.POST.getlist("option_b[]")
+        option_c = request.POST.getlist("option_c[]")
+        option_d = request.POST.getlist("option_d[]")
+        correct = request.POST.getlist("correct_answer[]")
+
+        for i in range(len(questions)):
+
+            question = Question.objects.create(
+                quiz=quiz,
+                text=questions[i],
+                order=i+1
+            )
+
+            Choice.objects.create(
+                question=question,
+                text=option_a[i],
+                is_correct=(correct[i] == "A")
+            )
+
+            Choice.objects.create(
+                question=question,
+                text=option_b[i],
+                is_correct=(correct[i] == "B")
+            )
+
+            Choice.objects.create(
+                question=question,
+                text=option_c[i],
+                is_correct=(correct[i] == "C")
+            )
+
+            Choice.objects.create(
+                question=question,
+                text=option_d[i],
+                is_correct=(correct[i] == "D")
+            )
+
+        return redirect("teacher_courses")
+
+    return render(request,"teacher/create_quiz.html",{
+        "course":course,
+        "lessons":lessons
+    })
 
 
 @login_required
@@ -586,7 +723,7 @@ def payment(request, enrollment_id):
         if teacher and teacher != request.user:
             Notification.objects.create(
                 user=teacher,
-                message=f"💰 Học viên {request.user.username} đã thanh toán {enrollment.course.price} VNĐ cho khóa học '{enrollment.course.title}'"
+                message=f" Học viên {request.user.username} đã thanh toán {enrollment.course.price} VNĐ cho khóa học '{enrollment.course.title}'"
             )
 
         messages.success(request, "Thanh toán thành công!")
@@ -638,3 +775,4 @@ def mark_notifications_read(request):
         ).update(is_read=True)
 
         return JsonResponse({'status': 'ok'})
+    

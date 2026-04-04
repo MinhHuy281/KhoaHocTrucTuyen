@@ -1,51 +1,110 @@
-.container {
-    max-width: 800px;
+/* ===== PAGE ===== */
+.container{
+    max-width: 900px;
     margin: auto;
+    padding: 30px;
 }
 
-h2 {
+h2{
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+/* ===== FORM ===== */
+.form-group{
     margin-bottom: 20px;
 }
 
-.form-group {
-    margin-bottom: 15px;
+label{
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
 }
 
-.form-control {
+/* input */
+.form-control{
     width: 100%;
     padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: 0.2s;
 }
 
-.form-control:focus {
+.form-control:focus{
     border-color: #4CAF50;
     outline: none;
+    box-shadow: 0 0 4px rgba(76,175,80,0.3);
 }
 
-.btn {
-    padding: 10px 15px;
+/* ===== QUESTION CARD ===== */
+.question-item{
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 5px solid #4CAF50;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.question-item h4{
+    margin-bottom: 15px;
+    color: #4CAF50;
+}
+
+/* ===== BUTTON ===== */
+.btn{
+    padding: 10px 18px;
     border: none;
-    border-radius: 6px;
-    text-decoration: none;
+    border-radius: 8px;
     cursor: pointer;
-    display: inline-block;
+    font-size: 14px;
+    transition: 0.2s;
 }
 
-.btn-success {
-    background: #28a745;
+/* thêm câu hỏi */
+.btn-primary{
+    background: #4CAF50;
     color: white;
 }
 
-.btn-success:hover {
-    background: #218838;
+.btn-primary:hover{
+    background: #3d9140;
 }
 
-.btn-secondary {
-    background: #6c757d;
+/* lưu */
+.btn-success{
+    background: #2196F3;
     color: white;
 }
 
-.btn-secondary:hover {
-    background: #5a6268;
+.btn-success:hover{
+    background: #1976D2;
+}
+
+/* quay lại */
+.btn-secondary{
+    background: #777;
+    color: white;
+}
+
+.btn-secondary:hover{
+    background: #555;
+}
+
+/* ===== HR ===== */
+hr{
+    margin: 25px 0;
+    border: none;
+    border-top: 1px solid #eee;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width:768px){
+
+.container{
+    padding: 20px;
+}
+
 }

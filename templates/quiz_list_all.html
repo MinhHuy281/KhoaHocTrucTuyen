@@ -17,7 +17,7 @@
             <div class="quiz-card">
                 <h5 class="quiz-title">{{ quiz.title }}</h5>
                 <p><strong>Khóa học:</strong> {{ quiz.course.title }}</p>
-                <p><strong>Thời gian:</strong> {{ quiz.time_limit|div:60 }} phút</p>
+                <p><strong>Thời gian:</strong> {{ quiz.minutes }} phút</p>
                 <a href="{% url 'start_quiz' quiz.id %}" class="btn btn-primary btn-sm">Bắt đầu làm bài</a>
             </div>
         {% endfor %}

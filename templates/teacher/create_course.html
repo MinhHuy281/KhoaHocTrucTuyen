@@ -15,6 +15,12 @@
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
 
+        {% if error %}
+            <div class="form-group" style="color: #b00; margin-bottom: 15px;">
+                {{ error }}
+            </div>
+        {% endif %}
+
         <!-- TIÊU ĐỀ -->
         <div class="form-group">
             <label>Tiêu đề khóa học</label>
@@ -63,13 +69,34 @@
 
         <!-- MÔN -->
         <div class="form-group">
-            <label>Môn học</label>
-            <select name="subject" class="form-control" required>
-                <option value="">-- Chọn môn --</option>
+            <label>Chọn cách thêm môn học</label>
+            <div>
+                <label>
+                    <input type="radio" name="subject_option" value="existing" checked>
+                    Chọn môn có sẵn
+                </label>
+                <label style="margin-left: 20px;">
+                    <input type="radio" name="subject_option" value="new">
+                    Thêm môn mới
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group" id="existing_subject" style="display: block;">
+            <label>Môn học có sẵn</label>
+            <select name="subject" class="form-control">
+                <option value="">-- Chọn môn có sẵn --</option>
                 {% for s in subjects %}
                     <option value="{{ s.id }}">{{ s.name }}</option>
                 {% endfor %}
             </select>
+        </div>
+
+        <div class="form-group" id="new_subject" style="display: none;">
+            <label>Tên môn mới</label>
+            <input type="text" name="new_subject" class="form-control"
+                   placeholder="Nhập tên môn mới">
+            <small>Nhập tên môn học mới nếu không có trong danh sách.</small>
         </div>
 
         <!-- LỚP -->
@@ -100,4 +127,25 @@
         <a href="/teacher/courses/" class="btn-secondary">⬅ Quay lại</a>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const radios = document.querySelectorAll('input[name="subject_option"]');
+    const existingDiv = document.getElementById('existing_subject');
+    const newDiv = document.getElementById('new_subject');
+
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'existing') {
+                existingDiv.style.display = 'block';
+                newDiv.style.display = 'none';
+            } else {
+                existingDiv.style.display = 'none';
+                newDiv.style.display = 'block';
+            }
+        });
+    });
+});
+</script>
+
 {% endblock %}

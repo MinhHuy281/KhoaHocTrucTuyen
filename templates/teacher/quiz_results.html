@@ -1,0 +1,113 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Quản lý ôn luyện{% endblock %}
+
+{% block content %}
+<div class="teacher-container">
+    <h2>📊 Quản lý ôn luyện</h2>
+
+    {% for data in quiz_data %}
+        <div class="quiz-section">
+            <h3>{{ data.quiz.title }} - {{ data.quiz.course.title }}</h3>
+            <p><strong>Số câu hỏi:</strong> {{ data.quiz.questions.count }}</p>
+
+            {% if data.attempts %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Học viên</th>
+                            <th>Thời gian làm</th>
+                            <th>Điểm</th>
+                            <th>Đúng/Sai</th>
+                            <th>Trạng thái</th>
+                            <th>Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attempt in data.attempts %}
+                            <tr>
+                                <td>{{ attempt.user.username }}</td>
+                                <td>{{ attempt.finished_at|date:"d/m/Y H:i" }}</td>
+                                <td><strong>{{ attempt.percentage|floatformat:1 }}%</strong></td>
+                                <td>{{ attempt.correct_answers }}/{{ attempt.correct_answers|add:attempt.wrong_answers }}</td>
+                                <td>
+                                    {% if attempt.completed %}
+                                        <span class="badge-success">Hoàn thành</span>
+                                    {% else %}
+                                        <span class="badge-warning">Chưa hoàn thành</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'teacher_attempt_detail' attempt.id %}" class="btn-view-detail">Xem →</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>Chưa có học viên nào làm bài này.</p>
+            {% endif %}
+        </div>
+        <hr>
+    {% empty %}
+        <p>Bạn chưa tạo bài ôn luyện nào.</p>
+    {% endfor %}
+
+    <a href="/teacher/courses/" class="btn-secondary">⬅ Quay lại</a>
+</div>
+
+<style>
+.quiz-section {
+    margin-bottom: 30px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.table th {
+    background-color: #f2f2f2;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: black;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.btn-view-detail {
+    background-color: #667eea;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+}
+
+.btn-view-detail:hover {
+    background-color: #5568d3;
+    text-decoration: none;
+}
+</style>
+
+{% endblock %}
