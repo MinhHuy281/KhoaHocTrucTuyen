@@ -13,6 +13,120 @@
 </head>
 
 <body>
+<style>
+.teacher-noti {
+    position: relative;
+}
+
+.teacher-noti-btn {
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.teacher-noti-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.teacher-noti-btn i {
+    font-size: 19px;
+}
+
+.teacher-noti-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+.teacher-noti-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 42px;
+    width: 340px;
+    max-height: 360px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 16px 40px rgba(2, 6, 23, 0.3);
+    z-index: 9999;
+    padding: 8px;
+}
+
+.teacher-noti.is-open .teacher-noti-dropdown {
+    display: block;
+}
+
+.teacher-noti-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.teacher-noti-head h4 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.teacher-noti-mark {
+    border: none;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.teacher-noti-item {
+    padding: 10px 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.teacher-noti-item:last-child {
+    border-bottom: none;
+}
+
+.teacher-noti-item:hover {
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.teacher-noti-msg {
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.teacher-noti-time {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #64748b;
+}
+</style>
 
 <!-- NAVBAR -->
 <nav class="navbar">
@@ -37,26 +151,28 @@
                 <div class="user-box">
 
                     <!-- 🔔 NOTIFICATION -->
-                    <div class="noti-box" onclick="markNotiRead()">
-                        <i class="bi bi-bell"></i>
+                    <div class="teacher-noti" id="teacherNotiBox">
+                        <button type="button" class="teacher-noti-btn" id="teacherNotiBtn" aria-label="Thông báo">
+                            <i class="bi bi-bell"></i>
+                            {% if unread_count and unread_count > 0 %}
+                                <span class="teacher-noti-badge">{{ unread_count }}</span>
+                            {% endif %}
+                        </button>
 
-                        <!-- 🔴 BADGE FIX -->
-                        {% if unread_count > 0 %}
-                            <span class="noti-badge">
-                                {{ unread_count }}
-                            </span>
-                        {% endif %}
-
-                        <div class="noti-dropdown">
-                            <h4>🔔 Thông báo</h4>
+                        <div class="teacher-noti-dropdown">
+                            <div class="teacher-noti-head">
+                                <h4>🔔 Thông báo</h4>
+                                <button type="button" class="teacher-noti-mark" onclick="markNotiRead(event)">Đánh dấu đã đọc</button>
+                            </div>
 
                             {% for noti in notifications %}
-                                <div class="noti-item">
-                                    {{ noti.message }}
+                                <div class="teacher-noti-item">
+                                    <div class="teacher-noti-msg">{{ noti.message }}</div>
+                                    <div class="teacher-noti-time">{{ noti.created_at|date:"d/m/Y H:i" }}</div>
                                 </div>
                             {% empty %}
-                                <div class="noti-item">
-                                    Không có thông báo
+                                <div class="teacher-noti-item">
+                                    <div class="teacher-noti-msg">Không có thông báo</div>
                                 </div>
                             {% endfor %}
                         </div>
@@ -75,7 +191,7 @@
                     </form>
                 </div>
             {% else %}
-                <a href="{% url 'login' %}" class="login-btn">Đăng nhập</a>
+                <a href="{% url 'teacher_login' %}" class="login-btn">Đăng nhập</a>
                 <a href="{% url 'register' %}" class="register-btn">Đăng ký</a>
             {% endif %}
         </div>
@@ -104,7 +220,12 @@ function getCookie(name) {
     return cookieValue;
 }
 
-function markNotiRead() {
+function markNotiRead(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
     fetch("/mark-notifications-read/", {
         method: "POST",
         headers: {
@@ -113,6 +234,23 @@ function markNotiRead() {
         }
     }).then(() => {
         location.reload();
+    });
+}
+
+const teacherNotiBox = document.getElementById("teacherNotiBox");
+const teacherNotiBtn = document.getElementById("teacherNotiBtn");
+
+if (teacherNotiBox && teacherNotiBtn) {
+    teacherNotiBtn.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        teacherNotiBox.classList.toggle("is-open");
+    });
+
+    document.addEventListener("click", function (event) {
+        if (!teacherNotiBox.contains(event.target)) {
+            teacherNotiBox.classList.remove("is-open");
+        }
     });
 }
 </script>

@@ -11,13 +11,9 @@
 <div class="course-detail">
     <div class="video-section">
         <div class="video-container">
-
-            {# ✅ FIX: tránh lỗi + bỏ ngoặc #}
             {% if lessons %}
 
-            {# ===== FIX CHẶN VIDEO: FREE XEM, CÓ PHÍ PHẢI THANH TOÁN ===== #}
-            {% if course.price == 0 or approved or lessons.0.is_free_preview %}
-        
+            {% if course.price == 0 or approved %}
                 {% if lessons.0.get_youtube_id %}
                     <iframe 
                     width="100%" 
@@ -47,10 +43,17 @@
                 <div class="locked-video">
                     <div class="lock-overlay">
                         <i class="bi bi-lock-fill"></i>
-                        <h3>Đăng ký để xem bài giảng</h3>
-                        <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">
-                            Đăng ký ngay
-                        </a>
+                        <h3>Video đang bị khóa</h3>
+                        <p>Khóa học này chỉ mở video sau khi bạn đăng ký và thanh toán thành công.</p>
+                        {% if pending %}
+                            <a href="{% url 'payment' enrollment.id %}" class="btn-enroll btn-enroll--primary">
+                                💳 Thanh toán ngay
+                            </a>
+                        {% else %}
+                            <a href="{% url 'enroll_course' course.id %}" class="btn-enroll btn-enroll--primary">
+                                📘 Đăng ký khóa học
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             {% endif %}
@@ -77,26 +80,36 @@
                     {% if course.price == 0 %}Miễn phí{% else %}{{ course.price }} VNĐ{% endif %}
                 </div>
 
-                {# ✅ BUTTON LOGIC CHUẨN #}
                 {% if approved %}
-                    <div class="enrolled">✅ ĐÃ MỞ KHÓA - VÀO HỌC</div>
+                    <div class="enrolled enrolled--success">
+                        ✅ Đã mở khóa nội dung khóa học
+                    </div>
+
+                {% elif course.price == 0 %}
+                    <a href="{% if lessons %}{% url 'lesson_view' lessons.0.id %}{% else %}#{% endif %}" class="course-cta course-cta--free">
+                        <span class="course-cta__icon">✨</span>
+                        <span>
+                            <strong>Vào học ngay</strong>
+                            <small>Khóa học miễn phí</small>
+                        </span>
+                    </a>
 
                 {% elif pending %}
-                    <div class="enrolled">⏳ ĐANG XỬ LÝ THANH TOÁN</div>
+                    <div class="enrolled enrolled--pending">⏳ Đang chờ thanh toán</div>
 
                 {% elif enrolled %}
                     <a href="{% url 'payment' enrollment.id %}" class="btn-enroll">
-                        💳 THANH TOÁN NGAY
+                        💳 Thanh toán ngay
                     </a>
 
                 {% elif request.user.is_authenticated %}
                     <a href="{% url 'enroll_course' course.id %}" class="btn-enroll">
-                        ĐĂNG KÝ NGAY
+                        📘 Đăng ký khóa học
                     </a>
 
                 {% else %}
                     <a href="{% url 'login' %}?next={% url 'course_detail' course.id %}" class="btn-enroll">
-                        ĐĂNG NHẬP ĐỂ ĐĂNG KÝ
+                        🔐 Đăng nhập để đăng ký
                     </a>
                 {% endif %}
             </div>
@@ -128,12 +141,35 @@
             {% endfor %}
         </div>
 
-        {# ✅ CHỈ CHO ÔN LUYỆN KHI ĐÃ DUYỆT #}
-        {% if enrolled %}
-            <div class="mt-5 text-center">
-                <a href="{% url 'quiz_list' course.id %}" class="btn btn-info btn-lg">
-                    <i class="bi bi-journal-text me-2"></i> Ôn Luyện
-                </a>
+        {# ✅ CHỈ CHO ÔN LUYỆN KHI ĐÃ DUYỆT HOẶC KHÓA MIỄN PHÍ #}
+        {% if quiz_count > 0 %}
+            {% if approved or course.price == 0 %}
+                <div class="quiz-card">
+                    <div class="quiz-card__icon">📝</div>
+                    <div class="quiz-card__content">
+                        <h3>Ôn luyện ngay</h3>
+                        <p>Khóa học này có {{ quiz_count }} bài tập. Làm bài để kiểm tra mức độ nắm vững kiến thức.</p>
+                    </div>
+                    <a href="{% url 'quiz_list' course.id %}" class="quiz-card__button">
+                        Vào ôn luyện
+                    </a>
+                </div>
+            {% else %}
+                <div class="quiz-card quiz-card--locked">
+                    <div class="quiz-card__icon">🔒</div>
+                    <div class="quiz-card__content">
+                        <h3>Ôn luyện đã bị khóa</h3>
+                        <p>Đăng ký và thanh toán khóa học để mở phần bài tập.</p>
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="quiz-card quiz-card--empty">
+                <div class="quiz-card__icon">ℹ️</div>
+                <div class="quiz-card__content">
+                    <h3>Chưa có bài tập</h3>
+                    <p>Hiện tại chưa có bài tập cho khóa học này.</p>
+                </div>
             </div>
         {% endif %}
     </div>

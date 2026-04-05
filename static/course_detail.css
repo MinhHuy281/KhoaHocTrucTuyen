@@ -55,7 +55,7 @@
 .lock-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.75);
+    background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(2,132,199,0.82));
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -63,6 +63,7 @@
     color: white;
     text-align: center;
     z-index: 2;
+    padding: 24px;
 }
 
 .lock-overlay i {
@@ -73,6 +74,24 @@
 .lock-overlay h3 {
     font-size: 1.8rem;
     margin-bottom: 16px;
+}
+
+.lock-overlay p {
+    max-width: 520px;
+    margin: 0 0 24px;
+    color: rgba(255,255,255,0.88);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.btn-enroll--primary {
+    background: #f59e0b;
+    color: #0f172a;
+    box-shadow: 0 12px 30px rgba(245,158,11,0.25);
+}
+
+.btn-enroll--primary:hover {
+    background: #fbbf24;
 }
 
 .btn-enroll {
@@ -135,6 +154,69 @@
     padding: 10px 20px;
     border-radius: 8px;
     font-weight: 600;
+}
+
+.enrolled--pending {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+.enrolled--success {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.course-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #0ea5e9, #2563eb);
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 18px 36px rgba(37,99,235,0.28);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.course-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 44px rgba(37,99,235,0.34);
+    filter: brightness(1.02);
+}
+
+.course-cta--free {
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 18px 36px rgba(16,185,129,0.24);
+}
+
+.course-cta__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.course-cta strong {
+    display: block;
+    font-size: 1.06rem;
+}
+
+.course-cta small {
+    display: block;
+    font-size: 0.82rem;
+    opacity: 0.88;
+    margin-top: 2px;
 }
 
 .lessons-section {
@@ -211,6 +293,81 @@
     padding: 40px 0;
 }
 
+.quiz-card {
+    margin-top: 28px;
+    padding: 22px 24px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #0f172a, #1e3a8a 55%, #2563eb);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    box-shadow: 0 18px 40px rgba(15,23,42,0.18);
+}
+
+.quiz-card--locked,
+.quiz-card--empty {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    color: #0f172a;
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+}
+
+.quiz-card__icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    background: rgba(255,255,255,0.15);
+    flex-shrink: 0;
+}
+
+.quiz-card--locked .quiz-card__icon,
+.quiz-card--empty .quiz-card__icon {
+    background: #fff;
+}
+
+.quiz-card__content {
+    flex: 1;
+}
+
+.quiz-card__content h3 {
+    margin: 0 0 6px;
+    font-size: 1.2rem;
+}
+
+.quiz-card__content p {
+    margin: 0;
+    color: rgba(255,255,255,0.88);
+}
+
+.quiz-card--locked .quiz-card__content p,
+.quiz-card--empty .quiz-card__content p {
+    color: #475569;
+}
+
+.quiz-card__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 22px;
+    border-radius: 12px;
+    background: #fff;
+    color: #1d4ed8;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    white-space: nowrap;
+}
+
+.quiz-card__button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(255,255,255,0.18);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .meta-row {
@@ -221,5 +378,19 @@
         flex-direction: column;
         gap: 16px;
         align-items: flex-start;
+    }
+
+    .course-cta {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .quiz-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .quiz-card__button {
+        width: 100%;
     }
 }

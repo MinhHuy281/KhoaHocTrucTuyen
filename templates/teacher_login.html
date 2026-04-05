@@ -1,34 +1,29 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Đăng nhập học viên{% endblock %}
+{% block title %}Đăng nhập giảng viên{% endblock %}
 
-{% block extra_css %}  <!-- dùng extra_css để load riêng -->
+{% block extra_css %}
 <link rel="stylesheet" href="{% static 'auth.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="auth-wrapper">
     <div class="auth-card">
-        <div class="auth-title">Đăng nhập học viên</div>
+        <div class="auth-title">Đăng nhập giảng viên</div>
 
         <form method="POST" class="auth-form">
             {% csrf_token %}
 
             <input type="text" name="username" placeholder="Tên đăng nhập" class="auth-input" required>
-
             <input type="password" name="password" placeholder="Mật khẩu" class="auth-input" required>
 
-            <button type="submit" class="auth-btn"> Đăng nhập học viên </button>
+            <button type="submit" class="auth-btn"> Đăng nhập giảng viên </button>
         </form>
 
-        {% if error %}
-            <div class="auth-error">{{ error }}</div>
-        {% endif %}
-
         <div class="auth-link">
-            <a href="{% url 'teacher_login' %}">Đăng nhập giảng viên</a> |
-            <a href="{% url 'password_reset' %}">Quên mật khẩu?</a> | 
+            <a href="{% url 'login' %}">Đăng nhập học viên</a> |
+            <a href="{% url 'password_reset' %}">Quên mật khẩu?</a> |
             Chưa có tài khoản? <a href="{% url 'register' %}">Đăng ký</a>
         </div>
     </div>

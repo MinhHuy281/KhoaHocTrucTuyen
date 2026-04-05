@@ -23,7 +23,11 @@
         <div class="menu">
             <a href="/">Trang chủ</a>
             <a href="/courses/" class="dropdown">Khóa học</a>
-            <a href="{% url 'quiz_list_all' %}" class="menu-item">Ôn Luyện</a>      
+            {% if current_user %}
+                <a href="{% url 'quiz_list_all' %}" class="menu-item">Ôn Luyện</a>
+            {% else %}
+                <a href="{% url 'login' %}?next={% url 'quiz_list_all' %}" class="menu-item">Ôn Luyện</a>
+            {% endif %}
             <a href="#">Giảng viên</a>
             <a href="#">Liên hệ</a>
         </div>

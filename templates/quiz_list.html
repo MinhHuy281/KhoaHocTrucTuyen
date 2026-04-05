@@ -1,15 +1,41 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ôn luyện - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'quiz_list.css' %}">
+{% endblock %}
+
 {% block content %}
-<h2>Bài tập ôn luyện - {{ course.title }}</h2>
-{% for quiz in quizzes %}
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>{{ quiz.title }}</h5>
-            <p>Thời gian: {{ quiz.minutes }} phút</p>
-            <a href="{% url 'start_quiz' quiz.id %}" class="btn btn-primary">Bắt đầu làm bài</a>
+<section class="quiz-page">
+    <div class="quiz-hero">
+        <div>
+            <h1>Bài tập ôn luyện</h1>
+            <p class="quiz-subtitle">{{ course.title }}</p>
         </div>
+        <a href="{% url 'course_detail' course.id %}" class="back-link">Quay lại khóa học</a>
     </div>
-{% empty %}
-    <p>Chưa có bài tập nào cho khóa học này.</p>
-{% endfor %}
+
+    {% if quizzes %}
+        <div class="quiz-grid">
+            {% for quiz in quizzes %}
+                <article class="quiz-card">
+                    <div class="quiz-badge">Bài {{ forloop.counter }}</div>
+                    <h3>{{ quiz.title }}</h3>
+                    <div class="quiz-meta">
+                        <span>⏱ {{ quiz.minutes }} phút</span>
+                        <span>🔁 Tối đa 3 lần làm</span>
+                    </div>
+                    <a href="{% url 'start_quiz' quiz.id %}" class="quiz-btn">Bắt đầu làm bài</a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="quiz-empty">
+            <h3>Hiện tại chưa có bài tập cho khóa học này.</h3>
+            <p>Giảng viên sẽ cập nhật bài ôn luyện sớm.</p>
+        </div>
+    {% endif %}
+</section>
 {% endblock %}
