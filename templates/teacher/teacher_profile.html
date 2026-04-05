@@ -1,0 +1,146 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Hồ sơ giảng viên{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'techer.css' %}?v=20260405-1">
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <section class="profile-hero">
+        <h1>Hồ sơ giảng viên</h1>
+        <p>Quản lý thông tin cá nhân và theo dõi hiệu suất giảng dạy của bạn.</p>
+    </section>
+
+    <div class="profile-grid">
+        <section class="profile-card" id="teacher-profile-section">
+            <h2>Thông tin giảng viên</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="profile-form-grid">
+                    <div class="profile-field">
+                        <label>Tên đăng nhập</label>
+                        <input type="text" value="{{ current_teacher.username }}" disabled>
+                    </div>
+
+                    <div class="profile-field">
+                        <label>Ảnh đại diện</label>
+                        <input type="file" name="avatar" accept="image/*">
+                    </div>
+
+                    <div class="profile-field">
+                        <label>Họ</label>
+                        <input type="text" name="first_name" value="{{ current_teacher.first_name|default:'' }}">
+                    </div>
+
+                    <div class="profile-field">
+                        <label>Tên</label>
+                        <input type="text" name="last_name" value="{{ current_teacher.last_name|default:'' }}">
+                    </div>
+
+                    <div class="profile-field full">
+                        <label>Email</label>
+                        <input type="email" name="email" value="{{ current_teacher.email|default:'' }}">
+                    </div>
+
+                    <div class="profile-field full">
+                        <label>Số điện thoại</label>
+                        <input type="text" name="phone" value="{{ profile.phone|default:'' }}">
+                    </div>
+
+                    <div class="profile-field full">
+                        <label>Giới thiệu</label>
+                        <textarea name="bio" placeholder="Mô tả ngắn về chuyên môn của bạn...">{{ profile.bio|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="profile-save-btn">Lưu thông tin</button>
+            </form>
+        </section>
+
+        <section class="profile-card" id="teacher-courses-history">
+            <h2>Lịch sử khóa học giảng dạy</h2>
+            <p style="margin-bottom: 12px; color: #64748b;">Tổng học viên đã mua: <b>{{ total_students }}</b> | Tổng lượt ôn luyện đã hoàn thành: <b>{{ total_attempts }}</b></p>
+            {% if teaching_courses %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Khóa học</th>
+                                <th>Môn học</th>
+                                <th>Lớp</th>
+                                <th>Học viên đã duyệt</th>
+                                <th>Số bài ôn luyện</th>
+                                <th>Giá</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for course in teaching_courses %}
+                                <tr>
+                                    <td><a href="{% url 'teacher_course_detail' course.id %}">{{ course.title }}</a></td>
+                                    <td>{{ course.subject }}</td>
+                                    <td>{{ course.grade }}</td>
+                                    <td>{{ course.approved_students }}</td>
+                                    <td>{{ course.quizzes_count }}</td>
+                                    <td>
+                                        {% if course.is_free %}
+                                            <span class="status-pill approved">Miễn phí</span>
+                                        {% else %}
+                                            {{ course.price }} VNĐ
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="history-empty">Bạn chưa tạo khóa học nào.</p>
+            {% endif %}
+        </section>
+
+        <section class="profile-card" id="teacher-quiz-history">
+            <h2>Lịch sử học viên ôn luyện</h2>
+            {% if teaching_attempts %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Học viên</th>
+                                <th>Bài ôn luyện</th>
+                                <th>Khóa học</th>
+                                <th>Điểm</th>
+                                <th>Tỷ lệ đúng</th>
+                                <th>Hoàn thành</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attempt in teaching_attempts %}
+                                <tr>
+                                    <td>{{ attempt.user.username }}</td>
+                                    <td>{{ attempt.quiz.title }}</td>
+                                    <td>{{ attempt.quiz.course.title }}</td>
+                                    <td>{{ attempt.score }}/{{ attempt.total_points }}</td>
+                                    <td>{{ attempt.percentage|floatformat:1 }}%</td>
+                                    <td>
+                                        {% if attempt.finished_at %}
+                                            {{ attempt.finished_at|date:"d/m/Y H:i" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="history-empty">Chưa có học viên hoàn thành bài ôn luyện nào.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

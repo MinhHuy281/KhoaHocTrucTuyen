@@ -23,10 +23,13 @@ urlpatterns = [
     # Authentication
     path('login/', views.login_view, name='login'),
     path('teacher/login/', views.teacher_login_view, name='teacher_login'),
+    path('teacher/register/', views.register_teacher_view, name='teacher_register'),
 
     path('register/', views.register_view, name='register'),
 
     path('logout/', views.logout_view, name='logout'),
+
+    path('profile/', views.user_profile, name='user_profile'),
 
     # Quiz - Ôn luyện theo khóa học
     path('course/<int:course_id>/quizzes/', views.quiz_list, name='quiz_list'),
@@ -40,6 +43,8 @@ urlpatterns = [
 
     # ================= TEACHER =================
     path('teacher/', views.teacher_dashboard, name='teacher_dashboard'),
+
+    path('teacher/profile/', views.teacher_profile, name='teacher_profile'),
 
     path('teacher/courses/', views.teacher_courses, name='teacher_courses'),
 
