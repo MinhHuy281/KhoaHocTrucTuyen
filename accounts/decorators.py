@@ -11,7 +11,7 @@ def teacher_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not SeparateSessionAuth.is_teacher_authenticated(request):
             messages.warning(request, '⚠️ Vui lòng đăng nhập tài khoản giảng viên!')
-            return redirect('login')
+            return redirect('teacher_login')
         
         # Gán current_user vào request để dễ sử dụng
         request.current_teacher = SeparateSessionAuth.get_teacher(request)
@@ -47,7 +47,7 @@ def admin_required(view_func):
         if not request.user.is_authenticated:
             return redirect('/admin/login/')
         
-        if not (request.user.is_superuser or request.user.is_staff):
+        if not request.user.is_superuser:
             messages.error(request, '❌ Bạn không có quyền admin!')
             return redirect('/')
         

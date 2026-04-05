@@ -1,31 +1,56 @@
 {% extends "base.html" %}
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}Ôn Luyện Tất Cả{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'quiz_list_all.css' %}">
+<link rel="stylesheet" href="{% static 'quiz_list_all.css' %}?v=20260405">
+<style>
+/* Fallback styles in case browser caches static CSS aggressively */
+.quiz-page { max-width: 1100px; margin: 28px auto 40px; padding: 0 16px; }
+.quiz-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.quiz-hero h1 { margin: 0; font-size: 2rem; color: #0f172a; }
+.quiz-subtitle { margin: 6px 0 0; color: #475569; }
+.back-link { text-decoration: none; color: #1d4ed8; font-weight: 600; background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 10px; }
+.quiz-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.quiz-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); }
+.quiz-badge { display: inline-block; margin-bottom: 10px; font-size: 0.82rem; color: #1d4ed8; background: #dbeafe; padding: 4px 10px; border-radius: 999px; font-weight: 700; }
+.quiz-card h3 { margin: 0 0 10px; color: #0f172a; font-size: 1.15rem; }
+.quiz-meta { display: flex; flex-direction: column; gap: 6px; color: #475569; font-size: 0.95rem; margin-bottom: 14px; }
+.quiz-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; width: 100%; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; font-weight: 700; border-radius: 12px; padding: 12px 14px; }
+.quiz-empty { background: #fff; border: 1px dashed #cbd5e1; border-radius: 16px; text-align: center; padding: 34px 20px; color: #475569; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h2 class="mb-4">Ôn Luyện - Tất cả bài tập</h2>
+<section class="quiz-page">
+    <div class="quiz-hero">
+        <div>
+            <h1>Ôn luyện - Tất cả bài tập</h1>
+            <p class="quiz-subtitle">Tổng hợp bài tập từ các khóa học bạn đã mở.</p>
+        </div>
+        <a href="{% url 'courses' %}" class="back-link">Xem thêm khóa học</a>
+    </div>
 
     {% if quizzes %}
-        {% for quiz in quizzes %}
-            <div class="quiz-card">
-                <h5 class="quiz-title">{{ quiz.title }}</h5>
-                <p><strong>Khóa học:</strong> {{ quiz.course.title }}</p>
-                <p><strong>Thời gian:</strong> {{ quiz.minutes }} phút</p>
-                <a href="{% url 'start_quiz' quiz.id %}" class="btn btn-primary btn-sm">Bắt đầu làm bài</a>
-            </div>
-        {% endfor %}
+        <div class="quiz-grid">
+            {% for quiz in quizzes %}
+                <article class="quiz-card">
+                    <div class="quiz-badge">Bài {{ forloop.counter }}</div>
+                    <h3>{{ quiz.title }}</h3>
+                    <div class="quiz-meta">
+                        <span>📚 {{ quiz.course.title }}</span>
+                        <span>⏱ {{ quiz.minutes }} phút</span>
+                    </div>
+                    <a href="{% url 'start_quiz' quiz.id %}" class="quiz-btn">Bắt đầu làm bài</a>
+                </article>
+            {% endfor %}
+        </div>
     {% else %}
-        <div class="alert alert-info text-center">
-            <i class="bi bi-info-circle-fill me-2"></i>
-            Bạn chưa có bài tập nào để ôn luyện. Hãy đăng ký khóa học để bắt đầu!
+        <div class="quiz-empty">
+            <h3>Hiện tại chưa có bài tập ôn luyện.</h3>
+            <p>Bạn hãy đăng ký khóa học và chờ giảng viên tạo bài tập.</p>
         </div>
     {% endif %}
-</div>
+</section>
 {% endblock %}

@@ -1,4 +1,5 @@
 from accounts.auth import SeparateSessionAuth
+from django.contrib.auth.models import AnonymousUser
 
 class InjectCurrentUserMiddleware:
     """
@@ -19,19 +20,13 @@ class InjectCurrentUserMiddleware:
         request.is_user_authenticated = SeparateSessionAuth.is_user_authenticated(request)
         request.is_teacher_authenticated = SeparateSessionAuth.is_teacher_authenticated(request)
         
-        # ✅ QUAN TRỌNG: Override request.user để tương thích với code cũ
-        # Ưu tiên: teacher > user > admin
+        # Override request.user theo khu vực để tách session teacher/user/admin.
         if request.path.startswith('/teacher/'):
-            # Trang teacher → dùng current_teacher
-            if request.current_teacher:
-                request.user = request.current_teacher
+            request.user = request.current_teacher or AnonymousUser()
         elif request.path.startswith('/admin/'):
-            # Trang admin → giữ nguyên request.user của Django
             pass  
         else:
-            # Trang user → dùng current_user
-            if request.current_user:
-                request.user = request.current_user
+            request.user = request.current_user or AnonymousUser()
         
         response = self.get_response(request)
         return response

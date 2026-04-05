@@ -1,6 +1,5 @@
 # courses/urls.py
 from django.urls import path, include
-from django.contrib.auth import views as auth_views
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -23,10 +22,11 @@ urlpatterns = [
 
     # Authentication
     path('login/', views.login_view, name='login'),
+    path('teacher/login/', views.teacher_login_view, name='teacher_login'),
 
     path('register/', views.register_view, name='register'),
 
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('logout/', views.logout_view, name='logout'),
 
     # Quiz - Ôn luyện theo khóa học
     path('course/<int:course_id>/quizzes/', views.quiz_list, name='quiz_list'),

@@ -4,7 +4,7 @@ from django.urls import reverse
 
 class AdminAccessMiddleware:
     """
-    Middleware để đảm bảo chỉ superuser hoặc staff được vào /admin/
+    Middleware để đảm bảo chỉ superuser được vào /admin/
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -20,8 +20,8 @@ class AdminAccessMiddleware:
                 if not request.user.is_authenticated:
                     return redirect('/admin/login/?next=' + request.path)
                 
-                # Chỉ cho phép superuser hoặc staff vào admin
-                if not (request.user.is_superuser or request.user.is_staff):
+                # Chỉ cho phép superuser vào admin
+                if not request.user.is_superuser:
                     messages.error(request, '❌ Bạn không có quyền truy cập trang quản trị!')
                     return redirect('/')
         
