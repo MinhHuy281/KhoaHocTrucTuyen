@@ -16,7 +16,26 @@
             {% csrf_token %}
 
             <input type="text" name="username" placeholder="Tên đăng nhập" class="auth-input" required>
-            <input type="password" name="password" placeholder="Mật khẩu" class="auth-input" required>
+            <div class="password-field">
+                <input
+                    type="password"
+                    id="teacher-login-password"
+                    name="password"
+                    placeholder="Mật khẩu"
+                    class="auth-input"
+                    minlength="8"
+                    pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}"
+                    title="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+                    required
+                >
+                <button type="button" class="password-toggle" data-target="teacher-login-password" aria-label="Hiện mật khẩu">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+
+            <div class="password-rule">
+                Mật khẩu phải đủ mạnh: 8+ ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
+            </div>
 
             <button type="submit" class="auth-btn"> Đăng nhập giảng viên </button>
         </form>
@@ -24,8 +43,9 @@
         <div class="auth-link">
             <a href="{% url 'login' %}">Đăng nhập học viên</a> |
             <a href="{% url 'password_reset' %}">Quên mật khẩu?</a> |
-            Chưa có tài khoản? <a href="{% url 'register' %}">Đăng ký</a>
+            Chưa có tài khoản giảng viên? <a href="{% url 'teacher_register' %}">Đăng ký giảng viên</a>
         </div>
     </div>
 </div>
+<script src="{% static 'auth.js' %}?v=20260405-1"></script>
 {% endblock %}

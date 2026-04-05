@@ -4,7 +4,7 @@
 {% block title %}Khóa Học{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'courses.css' %}">
+<link rel="stylesheet" href="{% static 'courses.css' %}?v=20260405-1">
 {% endblock %}
 
 {% block content %}
@@ -18,28 +18,53 @@
 <div class="courses-page container">
     <!-- Sidebar lọc -->
     <aside class="sidebar">
-        <h2>Lọc Khóa Học</h2>
-        
-        <div class="filter-group">
-            <h3>Cấp học</h3>
-            {% for level in levels %}
-                <a href="?level={{ level.id }}" class="{% if request.GET.level == level.id|stringformat:'s' %}active{% endif %}">{{ level.name }}</a>
-            {% endfor %}
+        <div class="sidebar-head">
+            <h2>Lọc khóa học</h2>
+            <p>Chọn tiêu chí và bấm Áp dụng để lọc nhanh.</p>
         </div>
 
-        <div class="filter-group">
-            <h3>Lớp</h3>
-            {% for grade in grades %}
-                <a href="?grade={{ grade.id }}" class="{% if request.GET.grade == grade.id|stringformat:'s' %}active{% endif %}">{{ grade.name }}</a>
-            {% endfor %}
-        </div>
+        <form method="GET" class="filter-form">
+            <div class="filter-group">
+                <label for="level">Cấp học</label>
+                <select id="level" name="level" class="filter-select">
+                    <option value="">Tất cả cấp học</option>
+                    {% for level in levels %}
+                        <option value="{{ level.id }}" {% if request.GET.level == level.id|stringformat:'s' %}selected{% endif %}>
+                            {{ level.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <div class="filter-group">
-            <h3>Môn học</h3>
-            {% for subject in subjects %}
-                <a href="?subject={{ subject.id }}" class="{% if request.GET.subject == subject.id|stringformat:'s' %}active{% endif %}">{{ subject.name }}</a>
-            {% endfor %}
-        </div>
+            <div class="filter-group">
+                <label for="grade">Lớp</label>
+                <select id="grade" name="grade" class="filter-select">
+                    <option value="">Tất cả lớp</option>
+                    {% for grade in grades %}
+                        <option value="{{ grade.id }}" {% if request.GET.grade == grade.id|stringformat:'s' %}selected{% endif %}>
+                            {{ grade.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="subject">Môn học</label>
+                <select id="subject" name="subject" class="filter-select">
+                    <option value="">Tất cả môn học</option>
+                    {% for subject in subjects %}
+                        <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:'s' %}selected{% endif %}>
+                            {{ subject.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="filter-apply">Áp dụng</button>
+                <a href="{% url 'courses' %}" class="filter-clear">Xóa lọc</a>
+            </div>
+        </form>
     </aside>
 
     <!-- Danh sách khóa học -->

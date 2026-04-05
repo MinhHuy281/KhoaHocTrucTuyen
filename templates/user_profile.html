@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Tài khoản của tôi{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <section class="profile-hero">
+        <h1>Tài khoản của bạn</h1>
+        <p>Cập nhật thông tin cá nhân và theo dõi toàn bộ lịch sử học tập.</p>
+    </section>
+
+    <div class="profile-grid">
+        <section class="profile-card" id="profile-section">
+            <h2>Thông tin cá nhân</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="profile-form-grid">
+                    <div class="profile-field">
+                        <label>Tên đăng nhập</label>
+                        <input type="text" value="{{ current_user.username }}" disabled>
+                    </div>
+
+                    <div class="profile-field">
+                        <label>Ảnh đại diện</label>
+                        <input type="file" name="avatar" accept="image/*">
+                    </div>
+
+                    <div class="profile-field">
+                        <label>Họ</label>
+                        <input type="text" name="first_name" value="{{ current_user.first_name|default:'' }}">
+                    </div>
+
+                    <div class="profile-field">
+                        <label>Tên</label>
+                        <input type="text" name="last_name" value="{{ current_user.last_name|default:'' }}">
+                    </div>
+
+                    <div class="profile-field full">
+                        <label>Email</label>
+                        <input type="email" name="email" value="{{ current_user.email|default:'' }}">
+                    </div>
+
+                    <div class="profile-field full">
+                        <label>Số điện thoại</label>
+                        <input type="text" name="phone" value="{{ profile.phone|default:'' }}">
+                    </div>
+
+                    <div class="profile-field full">
+                        <label>Giới thiệu</label>
+                        <textarea name="bio" placeholder="Viết đôi dòng về bạn...">{{ profile.bio|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="profile-save-btn">Lưu thông tin</button>
+            </form>
+        </section>
+
+        <section class="profile-card" id="courses-history">
+            <h2>Lịch sử khóa học đã mua</h2>
+            {% if purchased_enrollments %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Khóa học</th>
+                                <th>Môn học</th>
+                                <th>Số tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày mua</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for enrollment in purchased_enrollments %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'course_detail' enrollment.course.id %}">{{ enrollment.course.title }}</a>
+                                    </td>
+                                    <td>{{ enrollment.course.subject }}</td>
+                                    <td>{{ enrollment.course.price }} VNĐ</td>
+                                    <td>
+                                        <span class="status-pill {{ enrollment.status }}">
+                                            {{ enrollment.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ enrollment.created|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="history-empty">Bạn chưa mua khóa học nào.</p>
+            {% endif %}
+        </section>
+
+        <section class="profile-card" id="quiz-history">
+            <h2>Lịch sử ôn luyện đã làm</h2>
+            {% if quiz_history %}
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Bài ôn luyện</th>
+                                <th>Khóa học</th>
+                                <th>Điểm</th>
+                                <th>Tỷ lệ đúng</th>
+                                <th>Hoàn thành</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attempt in quiz_history %}
+                                <tr>
+                                    <td>{{ attempt.quiz.title }}</td>
+                                    <td>{{ attempt.quiz.course.title }}</td>
+                                    <td>{{ attempt.score }}/{{ attempt.total_points }}</td>
+                                    <td>{{ attempt.percentage|floatformat:1 }}%</td>
+                                    <td>
+                                        {% if attempt.finished_at %}
+                                            {{ attempt.finished_at|date:"d/m/Y H:i" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="history-empty">Bạn chưa làm bài ôn luyện nào.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}

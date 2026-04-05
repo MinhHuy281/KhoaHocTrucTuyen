@@ -3,9 +3,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, logout as django_logout
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 import re
 
 # Import models
@@ -18,6 +20,21 @@ from .models import (
 from accounts.models import UserProfile
 from accounts.auth import SeparateSessionAuth
 from accounts.decorators import teacher_required, student_required
+
+
+def is_strong_password(password):
+    """Yêu cầu mật khẩu mạnh: >=8 ký tự, có hoa/thường/số/ký tự đặc biệt."""
+    if len(password) < 8:
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return False
+    return True
 
 
 # Trang chủ
@@ -143,6 +160,13 @@ def login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
 
+        if not is_strong_password(password or ""):
+            messages.error(
+                request,
+                '❌ Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
+            )
+            return render(request, 'login.html')
+
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
@@ -176,6 +200,13 @@ def teacher_login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
 
+        if not is_strong_password(password or ""):
+            messages.error(
+                request,
+                '❌ Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
+            )
+            return render(request, 'teacher_login.html')
+
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
@@ -202,27 +233,47 @@ def teacher_login_view(request):
 
 
 # ĐĂNG KÝ
-def register_view(request):
-    """Đăng ký tài khoản User hoặc Teacher"""
+def _register_by_role(request, role='student'):
+    """Đăng ký tách biệt theo role để tránh lẫn luồng student/teacher."""
+    template_name = 'teacher_register.html' if role == 'teacher' else 'register.html'
+
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        password = request.POST.get('password')
-        password2 = request.POST.get('password2')
-        role = request.POST.get('role', 'student')
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        password = request.POST.get('password', '')
+        password2 = request.POST.get('password2', '')
+        form_data = {
+            'username': username,
+            'email': email,
+            'phone': phone,
+            'role': role,
+        }
 
         if password != password2:
             messages.error(request, '❌ Mật khẩu không khớp!')
-            return render(request, 'register.html')
+            return render(request, template_name, {'form_data': form_data})
+
+        if not is_strong_password(password):
+            messages.error(
+                request,
+                '❌ Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
+            )
+            return render(request, template_name, {'form_data': form_data})
+
+        try:
+            validate_password(password)
+        except ValidationError as exc:
+            messages.error(request, '❌ ' + ' '.join(exc.messages))
+            return render(request, template_name, {'form_data': form_data})
 
         if User.objects.filter(username=username).exists():
             messages.error(request, '❌ Tên đăng nhập đã tồn tại!')
-            return render(request, 'register.html')
+            return render(request, template_name, {'form_data': form_data})
 
         if User.objects.filter(email=email).exists():
             messages.error(request, '❌ Email đã được sử dụng!')
-            return render(request, 'register.html')
+            return render(request, template_name, {'form_data': form_data})
 
         user = User.objects.create_user(
             username=username,
@@ -240,16 +291,28 @@ def register_view(request):
             user.is_staff = True
             user.save()
             messages.success(request, '✅ Đăng ký giảng viên thành công!')
-            # ✅ Auto login với SESSION RIÊNG
+            # Tách hẳn session: clear user session trước khi login teacher
+            SeparateSessionAuth.logout_user(request)
             SeparateSessionAuth.login_teacher(request, user)
             return redirect('/teacher/')
         else:
             messages.success(request, '✅ Đăng ký học viên thành công!')
-            # ✅ Auto login với SESSION RIÊNG
+            # Tách hẳn session: clear teacher session trước khi login user
+            SeparateSessionAuth.logout_teacher(request)
             SeparateSessionAuth.login_user(request, user)
             return redirect('/')
 
-    return render(request, 'register.html')
+    return render(request, template_name)
+
+
+def register_view(request):
+    """Đăng ký học viên (route mặc định /register/)."""
+    return _register_by_role(request, role='student')
+
+
+def register_teacher_view(request):
+    """Đăng ký giảng viên riêng biệt (route /teacher/register/)."""
+    return _register_by_role(request, role='teacher')
 
 
 # ĐĂNG XUẤT
@@ -260,6 +323,66 @@ def logout_view(request):
     django_logout(request)
     messages.success(request, '👋 Đã đăng xuất!')
     return redirect('/')
+
+
+@student_required
+def user_profile(request):
+    user = request.current_user
+    profile, _ = UserProfile.objects.get_or_create(
+        user=user,
+        defaults={'role': 'student'}
+    )
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        bio = request.POST.get('bio', '').strip()
+
+        if email and User.objects.filter(email=email).exclude(id=user.id).exists():
+            messages.error(request, '❌ Email này đã được dùng bởi tài khoản khác.')
+            return redirect('user_profile')
+
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+        user.save()
+
+        profile.phone = phone
+        profile.bio = bio
+
+        avatar = request.FILES.get('avatar')
+        if avatar:
+            profile.avatar = avatar
+
+        profile.save()
+        messages.success(request, '✅ Đã cập nhật thông tin cá nhân.')
+        return redirect('user_profile')
+
+    purchased_enrollments = Enrollment.objects.filter(
+        user=user,
+        status__in=['paid', 'approved']
+    ).select_related(
+        'course',
+        'course__subject',
+        'course__grade',
+        'course__level'
+    ).order_by('-created')
+
+    quiz_history = UserQuizAttempt.objects.filter(
+        user=user,
+        completed=True
+    ).select_related(
+        'quiz',
+        'quiz__course'
+    ).order_by('-finished_at', '-started_at')
+
+    return render(request, 'user_profile.html', {
+        'profile': profile,
+        'purchased_enrollments': purchased_enrollments,
+        'quiz_history': quiz_history,
+    })
 
 
 # === PHẦN ÔN LUYỆN (QUIZ) ===
@@ -395,6 +518,71 @@ def teacher_dashboard(request):
         'notifications': notifications[:5],
         'unread_count': unread_count,
         'unread_notifications': unread_notifications
+    })
+
+
+@teacher_required
+def teacher_profile(request):
+    teacher = request.current_teacher
+    profile, _ = UserProfile.objects.get_or_create(
+        user=teacher,
+        defaults={'role': 'teacher'}
+    )
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        bio = request.POST.get('bio', '').strip()
+
+        if email and User.objects.filter(email=email).exclude(id=teacher.id).exists():
+            messages.error(request, '❌ Email này đã được dùng bởi tài khoản khác.')
+            return redirect('teacher_profile')
+
+        teacher.first_name = first_name
+        teacher.last_name = last_name
+        teacher.email = email
+        teacher.save()
+
+        profile.phone = phone
+        profile.bio = bio
+        profile.role = 'teacher'
+
+        avatar = request.FILES.get('avatar')
+        if avatar:
+            profile.avatar = avatar
+
+        profile.save()
+        messages.success(request, '✅ Đã cập nhật thông tin giảng viên.')
+        return redirect('teacher_profile')
+
+    teaching_courses = Course.objects.filter(teacher=teacher).annotate(
+        approved_students=Count('enrollments', filter=Q(enrollments__status='approved')),
+        quizzes_count=Count('quizzes', distinct=True)
+    ).select_related('subject', 'grade', 'level').order_by('-id')
+
+    teaching_attempts = UserQuizAttempt.objects.filter(
+        quiz__course__teacher=teacher,
+        completed=True
+    ).select_related('user', 'quiz', 'quiz__course').order_by('-finished_at', '-started_at')
+
+    total_students = Enrollment.objects.filter(
+        course__teacher=teacher,
+        status='approved'
+    ).count()
+
+    total_attempts = UserQuizAttempt.objects.filter(
+        quiz__course__teacher=teacher,
+        completed=True
+    ).count()
+
+    return render(request, 'teacher/teacher_profile.html', {
+        'profile': profile,
+        'teaching_courses': teaching_courses,
+        'teaching_attempts': teaching_attempts,
+        'total_students': total_students,
+        'total_attempts': total_attempts,
     })
 
 @teacher_required

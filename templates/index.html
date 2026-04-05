@@ -3,9 +3,7 @@
 
 {% block title %}Trang Chủ - KhoaHocTrucTuyen{% endblock %}
 
-{% block extra_css %}
-  <link rel="stylesheet" href="{% static 'style.css' %}">
-{% endblock %}
+{% block extra_css %}{% endblock %}
 
 {% block content %}
 
@@ -45,8 +43,7 @@
         <h3>
           <a href="{% url 'courses' %}?subject=2">Tiếng Anh</a>
         </h3>
-          <p>Giao tiếp, Ngữ pháp & Luyện thi</p>
-        </a>
+        <p>Giao tiếp, Ngữ pháp & Luyện thi</p>
       </div>
       <div class="category-card">
         <div class="category-icon">⚛️</div>

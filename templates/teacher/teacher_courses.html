@@ -4,19 +4,23 @@
 {% block title %}Quản lý khóa học{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'style.css' %}">
+<link rel="stylesheet" href="{% static 'techer.css' %}?v=20260405-2">
 {% endblock %}
 
 {% block content %}
 
-<div class="teacher-container">
-    <h2 style="margin-bottom:20px;">📚 Khóa học của tôi</h2>
+<div class="teacher-container teacher-courses-page">
+    <div class="teacher-courses-header">
+        <h2 class="teacher-page-title">Khóa học của tôi</h2>
+        <p class="teacher-page-subtitle">Quản lý toàn bộ khóa học bạn đã tạo và xem nhanh thông tin quan trọng.</p>
 
-    <a href="/teacher/create/" class="btn-primary" style="margin-bottom:20px; display:inline-block;">
-        ➕ Tạo khóa học
-    </a>
+        <a href="/teacher/create/" class="btn-primary teacher-create-btn">
+            <i class="bi bi-plus-lg"></i>
+            Tạo khóa học
+        </a>
+    </div>
 
-    <div class="course-grid">
+    <div class="course-grid teacher-course-grid">
         {% for course in courses %}
         
         <!-- 👉 CLICK NGUYÊN CARD -->
@@ -30,7 +34,7 @@
                         <img src="{{ course.image.url }}" alt="{{ course.title }}">
                     {% else %}
                         <div class="no-image-placeholder">
-                            <span>Chưa có ảnh</span>
+                            <span>Chưa có ảnh khóa học</span>
                         </div>
                     {% endif %}
                 </div>
@@ -52,12 +56,12 @@
                     <div class="course-footer">
 
                         {% if course.is_free %}
-                            <span class="price" style="color:green;">Free</span>
+                            <span class="price price-free">Miễn phí</span>
                         {% else %}
                             <span class="price">{{ course.price }} VNĐ</span>
                             
                         {% endif %}
-                        <a href="{% url 'teacher_course_detail' course.id %}" class="btn-detail">Xem chi tiết</a>
+                        <span class="btn-detail">Xem chi tiết</span>
                     </div>
                 </div>
 
@@ -66,7 +70,14 @@
         </a>
 
         {% empty %}
-            <p>❌ Bạn chưa có khóa học nào</p>
+            <div class="teacher-empty-state">
+                <h3>Bạn chưa có khóa học nào</h3>
+                <p>Hãy bắt đầu tạo khóa học đầu tiên để chia sẻ kiến thức với học viên.</p>
+                <a href="/teacher/create/" class="btn-primary teacher-create-btn">
+                    <i class="bi bi-plus-lg"></i>
+                    Tạo khóa học đầu tiên
+                </a>
+            </div>
         {% endfor %}
     </div>
 </div>

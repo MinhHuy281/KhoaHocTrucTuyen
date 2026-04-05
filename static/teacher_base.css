@@ -1,0 +1,169 @@
+.teacher-navbar .search-box input {
+    min-width: 250px;
+    height: 40px;
+}
+
+.teacher-navbar .search-box button {
+    height: 40px;
+}
+
+.teacher-noti {
+    position: relative;
+}
+
+.teacher-noti-btn {
+    border: none;
+    background: transparent;
+    color: #1e3a8a;
+    cursor: pointer;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.teacher-noti-btn:hover {
+    background: #e8f1ff;
+}
+
+.teacher-noti-btn i {
+    font-size: 19px;
+}
+
+.teacher-noti-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+.teacher-noti-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 42px;
+    width: 250px;
+    max-height: 360px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 16px 40px rgba(2, 6, 23, 0.3);
+    z-index: 9999;
+    padding: 8px;
+}
+
+.teacher-noti.is-open .teacher-noti-dropdown {
+    display: block;
+}
+
+.teacher-noti-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.teacher-noti-head h4 {
+    margin: 0;
+    font-size: 0.8rem;
+}
+
+.teacher-noti-mark {
+    border: none;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.teacher-noti-item {
+    padding: 7px 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.teacher-noti-item:last-child {
+    border-bottom: none;
+}
+
+.teacher-noti-item:hover {
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.teacher-noti-msg {
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.teacher-noti-time {
+    margin-top: 4px;
+    font-size: 9px;
+    color: #64748b;
+}
+
+@media (max-width: 1200px) {
+    .teacher-navbar .search-box input {
+        min-width: 0;
+    }
+}
+
+/* Teacher home hero */
+.teacher-hero-full {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    border-bottom: 1px solid #d9e7fb;
+    background:
+        radial-gradient(circle at 14% 18%, rgba(20, 89, 217, 0.14), transparent 32%),
+        radial-gradient(circle at 86% 14%, rgba(14, 165, 233, 0.12), transparent 28%),
+        linear-gradient(180deg, #f6faff 0%, #e9f2ff 100%);
+}
+
+.teacher-hero-full .hero-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+.teacher-hero-full .hero-text h1 {
+    color: #0f2f74;
+}
+
+.teacher-hero-full .hero-text p {
+    color: #334155;
+}
+
+@media (max-width: 768px) {
+    .teacher-hero-full {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        padding-top: 74px;
+        padding-bottom: 54px;
+    }
+
+    .teacher-hero-full .hero-container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
