@@ -48,7 +48,7 @@ Xây dựng một website học trực tuyến đơn giản, thân thiện, phù
 ## Công nghệ sử dụng
 
 - **Backend**: Django 5.2
-- **Database**: SQLite (dev) / PostgreSQL (production khuyến nghị)
+- **Database**: MYSQL
 - **Frontend**: HTML, CSS, Bootstrap (hoặc Tailwind nếu nâng cấp)
 - **Authentication**: Django built-in auth + custom views
 - **Storage**: Local media cho video/ảnh (dev), có thể dùng S3/Cloudinary sau
