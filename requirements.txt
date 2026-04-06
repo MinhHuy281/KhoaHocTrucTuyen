@@ -9,6 +9,7 @@ django-jazzmin==2.6.0
 
 # Database
 # SQLite is included with Python, no additional package needed
+PyMySQL==1.1.1
 
 # Static files (production)
 whitenoise==6.5.0
