@@ -54,6 +54,8 @@
         <p>Bạn chưa tạo bài ôn luyện nào.</p>
     {% endfor %}
 
+    {% include "_pagination.html" with page_obj=quiz_page_obj query_string=quiz_query_string page_param='quiz_page' %}
+
     <a href="/teacher/courses/" class="btn-secondary">⬅ Quay lại</a>
 </div>
 

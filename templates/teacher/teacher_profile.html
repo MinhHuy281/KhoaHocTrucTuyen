@@ -97,6 +97,7 @@
                         </tbody>
                     </table>
                 </div>
+                {% include "_pagination.html" with page_obj=teaching_courses_page_obj query_string=teaching_courses_query_string page_param='course_page' %}
             {% else %}
                 <p class="history-empty">Bạn chưa tạo khóa học nào.</p>
             {% endif %}
@@ -137,6 +138,7 @@
                         </tbody>
                     </table>
                 </div>
+                {% include "_pagination.html" with page_obj=teaching_attempts_page_obj query_string=teaching_attempts_query_string page_param='attempt_page' %}
             {% else %}
                 <p class="history-empty">Chưa có học viên hoàn thành bài ôn luyện nào.</p>
             {% endif %}

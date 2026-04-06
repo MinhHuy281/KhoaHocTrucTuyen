@@ -1,0 +1,52 @@
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+{% with current_param=page_param|default:'page' %}
+<nav class="pagination-wrap" aria-label="Pagination">
+    <div class="pagination-meta">
+        <span>Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        <span>Tổng {{ page_obj.paginator.count }} mục</span>
+    </div>
+
+    <ul class="pagination-list">
+        {% if page_obj.has_previous %}
+            <li class="pagination-item">
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}=1" aria-label="Trang đầu">&laquo;</a>
+            </li>
+            <li class="pagination-item">
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.previous_page_number }}" aria-label="Trang trước">Trước</a>
+            </li>
+        {% endif %}
+
+        {% with start=page_obj.number|add:'-2' end=page_obj.number|add:'2' %}
+            {% if start > 1 %}
+                <li class="pagination-item pagination-ellipsis"><span class="pagination-link">...</span></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= start and num <= end %}
+                    {% if page_obj.number == num %}
+                        <li class="pagination-item active"><span class="pagination-link">{{ num }}</span></li>
+                    {% else %}
+                        <li class="pagination-item">
+                            <a class="pagination-link" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if end < page_obj.paginator.num_pages %}
+                <li class="pagination-item pagination-ellipsis"><span class="pagination-link">...</span></li>
+            {% endif %}
+        {% endwith %}
+
+        {% if page_obj.has_next %}
+            <li class="pagination-item">
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.next_page_number }}" aria-label="Trang sau">Sau</a>
+            </li>
+            <li class="pagination-item">
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.paginator.num_pages }}" aria-label="Trang cuối">&raquo;</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endwith %}
+{% endif %}

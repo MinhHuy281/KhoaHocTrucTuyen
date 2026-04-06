@@ -90,6 +90,7 @@
                         </tbody>
                     </table>
                 </div>
+                {% include "_pagination.html" with page_obj=purchased_enrollments_page_obj query_string=purchased_enrollments_query_string page_param='enrollment_page' %}
             {% else %}
                 <p class="history-empty">Bạn chưa mua khóa học nào.</p>
             {% endif %}
@@ -128,6 +129,7 @@
                         </tbody>
                     </table>
                 </div>
+                {% include "_pagination.html" with page_obj=quiz_history_page_obj query_string=quiz_history_query_string page_param='quiz_page' %}
             {% else %}
                 <p class="history-empty">Bạn chưa làm bài ôn luyện nào.</p>
             {% endif %}

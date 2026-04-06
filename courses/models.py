@@ -192,15 +192,26 @@ class UserQuizAttempt(models.Model):
         return f"{self.user.username} - {self.quiz.title}"
 
     def calculate_score(self):
+        answers = self.answers.select_related('question', 'selected_choice').all()
+        questions = list(self.quiz.questions.all())
 
         self.correct_answers = 0
         self.wrong_answers = 0
         self.score = 0
-        self.total_points = sum(q.points for q in self.quiz.questions.all())
+        self.total_points = sum(question.points for question in questions)
 
+        for answer in answers:
+            if answer.is_correct:
+                self.correct_answers += 1
+                self.score += answer.question.points
+
+        self.wrong_answers = max(len(questions) - self.correct_answers, 0)
 
         if self.total_points > 0:
             self.percentage = (self.score / self.total_points) * 100
+        else:
+            self.percentage = 0
+
         self.completed = True
         self.finished_at = timezone.now()
         self.save()
