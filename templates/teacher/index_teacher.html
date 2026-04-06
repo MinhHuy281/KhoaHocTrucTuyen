@@ -63,6 +63,8 @@
         <p class="no-data">Bạn chưa có khóa học nào.</p>
       {% endfor %}
     </div>
+
+    {% include "_pagination.html" with page_obj=course_page_obj query_string=course_query_string page_param='course_page' %}
   </div>
 </section>
 

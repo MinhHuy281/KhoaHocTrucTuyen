@@ -3,6 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
+from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, logout as django_logout
@@ -35,6 +36,18 @@ def is_strong_password(password):
     if not re.search(r"[^A-Za-z0-9]", password):
         return False
     return True
+
+
+def paginate_request_queryset(request, queryset, per_page=12, page_param='page'):
+    paginator = Paginator(queryset, per_page)
+    page_number = request.GET.get(page_param)
+    page_obj = paginator.get_page(page_number)
+
+    query_params = request.GET.copy()
+    query_params.pop(page_param, None)
+    query_string = query_params.urlencode()
+
+    return page_obj, query_string
 
 
 # Trang chủ
@@ -378,10 +391,27 @@ def user_profile(request):
         'quiz__course'
     ).order_by('-finished_at', '-started_at')
 
+    enrollment_page_obj, enrollment_query_string = paginate_request_queryset(
+        request,
+        purchased_enrollments,
+        per_page=6,
+        page_param='enrollment_page'
+    )
+    quiz_page_obj, quiz_query_string = paginate_request_queryset(
+        request,
+        quiz_history,
+        per_page=6,
+        page_param='quiz_page'
+    )
+
     return render(request, 'user_profile.html', {
         'profile': profile,
-        'purchased_enrollments': purchased_enrollments,
-        'quiz_history': quiz_history,
+        'purchased_enrollments': enrollment_page_obj,
+        'purchased_enrollments_page_obj': enrollment_page_obj,
+        'purchased_enrollments_query_string': enrollment_query_string,
+        'quiz_history': quiz_page_obj,
+        'quiz_history_page_obj': quiz_page_obj,
+        'quiz_history_query_string': quiz_query_string,
     })
 
 
@@ -503,6 +533,12 @@ def teacher_dashboard(request):
         return redirect('/')
 
     courses = Course.objects.filter(teacher=request.user)
+    course_page_obj, course_query_string = paginate_request_queryset(
+        request,
+        courses,
+        per_page=6,
+        page_param='course_page'
+    )
 
     # 🔔 ALL NOTIFICATIONS
     notifications = Notification.objects.filter(
@@ -514,7 +550,9 @@ def teacher_dashboard(request):
     unread_count = unread_notifications.count()
 
     return render(request, 'teacher/index_teacher.html', {
-        'courses': courses,
+        'courses': course_page_obj,
+        'course_page_obj': course_page_obj,
+        'course_query_string': course_query_string,
         'notifications': notifications[:5],
         'unread_count': unread_count,
         'unread_notifications': unread_notifications
@@ -591,9 +629,12 @@ def teacher_courses(request):
         return redirect('/')
 
     courses = Course.objects.filter(teacher=request.user)
+    page_obj, query_string = paginate_request_queryset(request, courses, per_page=8)
 
     return render(request, 'teacher/teacher_courses.html', {
-        'courses': courses
+        'courses': page_obj,
+        'page_obj': page_obj,
+        'query_string': query_string,
     })
 
 
@@ -727,12 +768,15 @@ def quiz_list_all(request):
     ).distinct()
 
     quizzes = Quiz.objects.filter(course__in=enrolled_courses).order_by('-created_at').distinct()
+    page_obj, query_string = paginate_request_queryset(request, quizzes, per_page=6)
 
     if not quizzes.exists():
         messages.info(request, 'Hiện chưa có bài ôn luyện khả dụng cho các khóa bạn đã mở.')
 
     return render(request, 'quiz_list_all.html', {
-        'quizzes': quizzes,
+        'quizzes': page_obj,
+        'page_obj': page_obj,
+        'query_string': query_string,
         'title': 'Ôn Luyện Tất Cả'
     })
 def teacher_delete_course(request, id):
@@ -764,10 +808,16 @@ def teacher_quiz_results(request):
 
     # Lấy tất cả quiz của teacher
     quizzes = Quiz.objects.filter(course__teacher=request.user).select_related('course')
+    quiz_page_obj, quiz_query_string = paginate_request_queryset(
+        request,
+        quizzes,
+        per_page=4,
+        page_param='quiz_page'
+    )
 
     # Lấy attempts cho mỗi quiz
     quiz_data = []
-    for quiz in quizzes:
+    for quiz in quiz_page_obj:
         attempts = UserQuizAttempt.objects.filter(quiz=quiz).select_related('user').order_by('-finished_at')
         quiz_data.append({
             'quiz': quiz,
@@ -775,7 +825,9 @@ def teacher_quiz_results(request):
         })
 
     return render(request, 'teacher/quiz_results.html', {
-        'quiz_data': quiz_data
+        'quiz_data': quiz_data,
+        'quiz_page_obj': quiz_page_obj,
+        'quiz_query_string': quiz_query_string,
     })
 
 @teacher_required

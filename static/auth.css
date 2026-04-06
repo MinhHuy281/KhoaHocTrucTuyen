@@ -60,6 +60,14 @@ color:#1f2937;
 
 }
 
+.auth-subtitle {
+    margin: -8px 0 18px;
+    color: #475569;
+    text-align: center;
+    line-height: 1.45;
+    font-size: 14px;
+}
+
 /* ===== FORM ===== */
 
 .auth-form{
