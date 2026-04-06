@@ -60,10 +60,90 @@ Xây dựng một website học trực tuyến đơn giản, thân thiện, phù
 - Python 3.10+
 - Git
 - Virtualenv (khuyến nghị)
+- MySQL Server 8.0+ (hoặc MariaDB tương thích)
 
 ### Các bước cài đặt
 
-1. Clone repository:
-   ```bash
-   git clone https://github.com/MinhHuy281/KhoaHocTrucTuyen.git
-   cd KhoaHocTrucTuyen
+1. Clone repository
+
+```bash
+git clone https://github.com/MinhHuy281/KhoaHocTrucTuyen.git
+cd KhoaHocTrucTuyen
+```
+
+2. Tạo và kích hoạt môi trường ảo
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Windows (CMD):
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+macOS/Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+3. Cài đặt dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+4. Tạo database MySQL
+
+```sql
+CREATE DATABASE khoahoctructuyen CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+5. Cấu hình database trong [KhoaHocTrucTuyen/settings.py](KhoaHocTrucTuyen/settings.py)
+
+Cập nhật các giá trị trong DATABASES['default'] cho đúng máy local của bạn:
+- NAME: khoahoctructuyen
+- USER
+- PASSWORD
+- HOST
+- PORT
+
+6. Chạy migrate
+
+```bash
+python manage.py migrate
+```
+
+7. Tạo tài khoản admin (khuyến nghị)
+
+```bash
+python manage.py createsuperuser
+```
+
+8. Chạy server local
+
+```bash
+python manage.py runserver
+```
+
+Truy cập:
+- Trang web: http://127.0.0.1:8000/
+- Admin: http://127.0.0.1:8000/admin/
+
+### Chạy kiểm thử
+
+```bash
+python manage.py test
+```
+
+### Ghi chú cho chức năng quên mật khẩu
+- Mặc định đang dùng console email backend để test local.
+- Mã xác nhận reset password sẽ in ra terminal đang chạy server.
