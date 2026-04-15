@@ -89,7 +89,7 @@
               <span>Lớp: {{ course.grade }}</span>
             </div>
             <div class="course-footer">
-              <span class="price">{{ course.price }} VNĐ</span>
+              <span class="price">{{ course.price|format_vnd }} VNĐ</span>
               <a href="/course/{{ course.id }}/" class="btn-detail">Xem chi tiết</a>
             </div>
           </div>
@@ -98,6 +98,8 @@
         <p class="no-data">Chưa có khóa học nổi bật. Hãy khám phá thêm!</p>
       {% endfor %}
     </div>
+
+    {% include "_pagination.html" %}
   </div>
 </section>
 

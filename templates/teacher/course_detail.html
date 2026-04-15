@@ -73,7 +73,7 @@
             {% if course.is_free %}
                 <div class="price">Miễn phí</div>
             {% else %}
-                <div class="price">{{ course.price }} VNĐ</div>
+                <div class="price">{{ course.price|format_vnd }} VNĐ</div>
             {% endif %}
 
             <div style="display:flex; gap:10px;">

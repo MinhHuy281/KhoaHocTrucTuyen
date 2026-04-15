@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Teacher - KhoaHocTrucTuyen{% endblock %}</title>
     
-    <link rel="stylesheet" href="{% static 'style.css' %}?v=20260405-11">
+    <link rel="stylesheet" href="{% static 'style.css' %}?v=20260407-12">
     <link rel="stylesheet" href="{% static 'base.css' %}?v=20260405-10">
     <link rel="stylesheet" href="{% static 'teacher_base.css' %}?v=20260405-9">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -70,10 +70,14 @@
                         <details class="user-menu-dropdown" id="teacherUserMenu">
                             <summary class="user-menu-trigger">
                                 <span class="user-avatar">
-                                    {% if current_teacher.first_name %}
-                                        {{ current_teacher.first_name|first|upper }}
+                                    {% if current_teacher_avatar_url %}
+                                        <img src="{{ current_teacher_avatar_url }}" alt="Avatar {{ current_teacher.username }}" class="user-avatar-img" width="24" height="24" style="width:24px;height:24px;object-fit:cover;border-radius:50%;display:block;">
                                     {% else %}
-                                        {{ current_teacher.username|first|upper }}
+                                        {% if current_teacher.first_name %}
+                                            {{ current_teacher.first_name|first|upper }}
+                                        {% else %}
+                                            {{ current_teacher.username|first|upper }}
+                                        {% endif %}
                                     {% endif %}
                                 </span>
                                 <span class="hello">Xin chào, <b>{{ current_teacher.username }}</b></span>

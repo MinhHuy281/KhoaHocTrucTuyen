@@ -52,13 +52,18 @@ def paginate_request_queryset(request, queryset, per_page=12, page_param='page')
 
 # Trang chủ
 def index(request):
-    courses = Course.objects.all()
-    return render(request, "index.html", {"courses": courses})
+    courses = Course.objects.all().order_by('-id')
+    page_obj, query_string = paginate_request_queryset(request, courses, per_page=6)
+    return render(request, "index.html", {
+        "courses": page_obj,
+        "page_obj": page_obj,
+        "query_string": query_string,
+    })
 
 
 # Danh sách khóa học
 def courses(request):
-    courses = Course.objects.all()
+    courses = Course.objects.all().order_by('-id')
 
     level = request.GET.get("level")
     grade = request.GET.get("grade")
@@ -81,8 +86,12 @@ def courses(request):
     grades = Grade.objects.all()
     subjects = Subject.objects.all()
 
+    page_obj, query_string = paginate_request_queryset(request, courses, per_page=6)
+
     return render(request, "courses.html", {
-        "courses": courses,
+        "courses": page_obj,
+        "page_obj": page_obj,
+        "query_string": query_string,
         "levels": levels,
         "grades": grades,
         "subjects": subjects,
@@ -94,6 +103,13 @@ def courses(request):
 def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     lessons = course.lessons.all().order_by('order')
+    first_lesson = lessons.first()
+    lesson_page_obj, lesson_query_string = paginate_request_queryset(
+        request,
+        lessons,
+        per_page=6,
+        page_param='lesson_page'
+    )
     quiz_count = course.quizzes.count()
 
     enrollment = None
@@ -121,7 +137,10 @@ def course_detail(request, course_id):
 
     return render(request, "course_detail.html", {
         "course": course,
-        "lessons": lessons,
+        "lessons": lesson_page_obj,
+        "lessons_total": lessons.count(),
+        "first_lesson": first_lesson,
+        "lesson_query_string": lesson_query_string,
         "quiz_count": quiz_count,
         "enrollment": enrollment,
         "enrolled": enrolled,
@@ -790,10 +809,8 @@ def teacher_delete_course(request, id):
 
 @teacher_required
 def teacher_course_detail(request, id):
-    if not request.user.is_staff:
-        return redirect('/')
-
-    course = get_object_or_404(Course, id=id, teacher=request.user)
+    teacher = request.current_teacher
+    course = get_object_or_404(Course, id=id, teacher=teacher)
     lessons = course.lessons.all().order_by('order')
 
     return render(request, 'teacher/course_detail.html', {
@@ -908,8 +925,8 @@ def teacher_edit_course(request, id):
 
 @teacher_required
 def create_quiz(request, id):
-
-    course = Course.objects.get(id=id)
+    teacher = request.current_teacher
+    course = get_object_or_404(Course, id=id, teacher=teacher)
     lessons = Lesson.objects.filter(course=course)
 
     if request.method == "POST":
@@ -917,7 +934,7 @@ def create_quiz(request, id):
         lesson_id = request.POST.get("lesson_id")
         title = request.POST.get("title")
 
-        lesson = Lesson.objects.get(id=lesson_id)
+        lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
 
         # tạo quiz
         quiz = Quiz.objects.create(

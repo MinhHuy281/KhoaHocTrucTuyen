@@ -28,6 +28,12 @@
 
                     <div class="profile-field">
                         <label>Ảnh đại diện</label>
+                        {% if profile.avatar %}
+                            <div class="profile-avatar-preview-wrap">
+                                <img src="{{ profile.avatar.url }}" alt="Ảnh đại diện hiện tại" class="profile-avatar-preview">
+                                <small>Ảnh đại diện hiện tại</small>
+                            </div>
+                        {% endif %}
                         <input type="file" name="avatar" accept="image/*">
                     </div>
 
@@ -89,7 +95,7 @@
                                         {% if course.is_free %}
                                             <span class="status-pill approved">Miễn phí</span>
                                         {% else %}
-                                            {{ course.price }} VNĐ
+                                            {{ course.price|format_vnd }} VNĐ
                                         {% endif %}
                                     </td>
                                 </tr>

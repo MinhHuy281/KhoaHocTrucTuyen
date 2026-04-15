@@ -24,6 +24,12 @@
 
                     <div class="profile-field">
                         <label>Ảnh đại diện</label>
+                        {% if profile.avatar %}
+                            <div class="profile-avatar-preview-wrap">
+                                <img src="{{ profile.avatar.url }}" alt="Ảnh đại diện hiện tại" class="profile-avatar-preview">
+                                <small>Ảnh đại diện hiện tại</small>
+                            </div>
+                        {% endif %}
                         <input type="file" name="avatar" accept="image/*">
                     </div>
 
@@ -78,7 +84,7 @@
                                         <a href="{% url 'course_detail' enrollment.course.id %}">{{ enrollment.course.title }}</a>
                                     </td>
                                     <td>{{ enrollment.course.subject }}</td>
-                                    <td>{{ enrollment.course.price }} VNĐ</td>
+                                    <td>{{ enrollment.course.price|format_vnd }} VNĐ</td>
                                     <td>
                                         <span class="status-pill {{ enrollment.status }}">
                                             {{ enrollment.get_status_display }}
