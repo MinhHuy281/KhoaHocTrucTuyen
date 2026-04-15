@@ -58,7 +58,7 @@
                         {% if course.is_free %}
                             <span class="price price-free">Miễn phí</span>
                         {% else %}
-                            <span class="price">{{ course.price }} VNĐ</span>
+                            <span class="price">{{ course.price|format_vnd }} VNĐ</span>
                             
                         {% endif %}
                         <span class="btn-detail">Xem chi tiết</span>

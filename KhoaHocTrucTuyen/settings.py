@@ -99,6 +99,7 @@ TEMPLATES = [
             ],
             'builtins': [
                 'courses.templatetags.compat_filters',
+                'courses.templatetags.custom_filters',
             ],
         },
     },

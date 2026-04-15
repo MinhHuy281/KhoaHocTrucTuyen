@@ -15,7 +15,7 @@
         <p><strong>Người học:</strong> {{ enrollment.user.username }}</p>
         <p><strong>Khóa học:</strong> {{ enrollment.course.title }}</p>
         <p><strong>Số tiền:</strong> 
-            <span class="price">{{ enrollment.course.price }} VNĐ</span>
+            <span class="price">{{ enrollment.course.price|format_vnd }} VNĐ</span>
         </p>
     </div>
 
