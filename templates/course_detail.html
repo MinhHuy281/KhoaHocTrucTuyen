@@ -5,7 +5,7 @@
 {% block title %}{{ course.title }} - KhoaHocTrucTuyen{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'course_detail.css' %}?v=20260407-2">
+    <link rel="stylesheet" href="{% static 'course_detail.css' %}?v=20260418-1">
 {% endblock %}
 
 {% block content %}
@@ -62,9 +62,27 @@
         {% else %}
             <div class="no-video-message">
                 <p>Chưa có bài học</p>
+
             </div>
         {% endif %}
         </div>
+
+        {% if first_lesson and first_lesson.slide_url %}
+        <section class="slide-panel" aria-label="Slide bài học">
+            <div class="slide-panel__compact">
+                <div class="slide-panel__compact-main">
+                    <span class="slide-panel__badge">📄 Slide</span>
+                    <h2 class="slide-panel__compact-title">{{ first_lesson.title }}</h2>
+                </div>
+
+                <div class="slide-panel__compact-actions">
+                    <a class="slide-btn slide-btn--primary" href="{{ first_lesson.slide_url }}" target="_blank" rel="noopener noreferrer">
+                        Mở liên kết
+                    </a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
 
         <div class="course-header">
             <h1>{{ course.title }}</h1>
@@ -85,6 +103,16 @@
                     <div class="enrolled enrolled--success">
                         ✅ Đã mở khóa nội dung khóa học
                     </div>
+
+                    {% if first_lesson %}
+                        <a href="{% url 'lesson_view' first_lesson.id %}" class="course-cta course-cta--free" style="margin-top: 12px;">
+                            <span class="course-cta__icon">📖</span>
+                            <span>
+                                <strong>Mở bài học đầu tiên</strong>
+                                <small>Xem video, Canva và nội dung bài học</small>
+                            </span>
+                        </a>
+                    {% endif %}
 
                 {% elif course.price == 0 %}
                     <a href="{% if first_lesson %}{% url 'lesson_view' first_lesson.id %}{% else %}#{% endif %}" class="course-cta course-cta--free">

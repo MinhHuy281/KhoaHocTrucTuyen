@@ -448,3 +448,50 @@
         padding: 26px 18px;
     }
 }
+/* FOOTER CARD */
+.course-footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:12px;
+}
+
+/* GIÁ */
+.price{
+    font-weight:600;
+    color:#333;
+    font-size:14px;
+}
+
+.price-free{
+    color:#16a34a;
+    font-weight:700;
+}
+
+/* NÚT XEM CHI TIẾT */
+.btn-detail{
+    padding:6px 14px;
+    font-size:13px;
+    border-radius:20px;
+    background:#2563eb;
+    color:white;
+    font-weight:500;
+    transition:all 0.25s ease;
+    cursor:pointer;
+}
+
+/* HOVER */
+.course-card:hover .btn-detail{
+    background:#1d4ed8;
+    transform:translateY(-1px);
+}
+
+/* CARD HOVER */
+.course-card{
+    transition:all 0.25s ease;
+}
+
+.course-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}

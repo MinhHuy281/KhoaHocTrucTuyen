@@ -72,6 +72,18 @@ class Lesson(models.Model):
     )
 
     video_file = models.FileField(upload_to='lessons/videos/', blank=True, null=True)
+    slide_file = models.FileField(
+        upload_to='lessons/slides/',
+        blank=True,
+        null=True,
+        help_text="Tải file slide .ppt hoặc .pptx từ máy lên"
+    )
+    slide_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Dùng cho link slide cũ nếu chưa upload file"
+    )
 
     content = models.TextField(blank=True)
     order = models.PositiveIntegerField(default=1)

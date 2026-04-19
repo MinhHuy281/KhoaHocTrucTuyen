@@ -110,6 +110,94 @@ text-decoration:none;
 border-radius:5px;
 }
 
+.slide-card{
+margin-bottom:24px;
+border:1px solid #dbe4f1;
+border-radius:16px;
+background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%);
+overflow:hidden;
+}
+
+.slide-head{
+padding:18px 20px;
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
+gap:16px;
+border-bottom:1px solid #d7e3f4;
+}
+
+.slide-eyebrow{
+margin:0 0 6px;
+font-size:12px;
+font-weight:700;
+color:#1d4ed8;
+letter-spacing:0.4px;
+text-transform:uppercase;
+}
+
+.slide-title{
+margin:0;
+font-size:1.2rem;
+color:#0f172a;
+}
+
+.slide-desc{
+margin:6px 0 0;
+color:#475569;
+font-size:0.92rem;
+}
+
+.slide-actions{
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+}
+
+.slide-actions a{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+padding:9px 14px;
+border-radius:10px;
+text-decoration:none;
+font-weight:600;
+font-size:0.86rem;
+}
+
+.slide-actions .btn-primary{
+background:#1d4ed8;
+color:white;
+}
+
+.slide-actions .btn-ghost{
+background:#e2e8f0;
+color:#0f172a;
+}
+
+.slide-frame{
+width:100%;
+height:500px;
+border:none;
+background:white;
+display:block;
+}
+
+@media (max-width: 768px){
+.slide-head{
+flex-direction:column;
+align-items:stretch;
+}
+
+.slide-actions a{
+flex:1;
+}
+
+.slide-frame{
+height:360px;
+}
+}
+
 </style>
 {% endblock %}
 
@@ -158,6 +246,39 @@ border-radius:5px;
 </div>
 
 
+{% if lesson and lesson.slide_url %}
+<section class="slide-card" aria-label="Slide bài học liên quan">
+<div class="slide-head">
+<div>
+<p class="slide-eyebrow">Tai lieu lien quan</p>
+<h3 class="slide-title">Slide bai hoc</h3>
+<p class="slide-desc">Bai hoc: <strong>{{ lesson.title }}</strong></p>
+</div>
+
+<div class="slide-actions">
+{% if slide_download_url %}
+<a class="btn-ghost" href="{{ slide_download_url }}" target="_blank" rel="noopener noreferrer">Tai slide</a>
+{% endif %}
+</div>
+</div>
+
+<iframe
+class="slide-frame"
+src="{{ slide_embed_url|default:lesson.slide_url }}"
+title="Slide bai hoc {{ lesson.title }}"
+loading="lazy"
+referrerpolicy="strict-origin-when-cross-origin"
+allowfullscreen>
+</iframe>
+
+<div class="slide-panel__footer" style="padding:12px 20px 18px; display:flex; justify-content:flex-end;">
+<a class="slide-panel__source-link" style="color:#1d4ed8; font-weight:700; text-decoration:none; font-size:0.88rem;" href="{{ lesson.slide_url }}" target="_blank" rel="noopener noreferrer">
+Mở bản gốc nếu slide chưa hiển thị đúng
+</a>
+</div>
+</section>
+{% endif %}
+
 
 <h3 style="margin-bottom:20px;border-bottom:2px solid #667eea;padding-bottom:10px;">
 📝 Chi tiết câu trả lời
@@ -185,6 +306,7 @@ Câu {{ forloop.counter }}: {{ answer.question.text }}
 <div>
 <strong>{{ forloop.counter }}.</strong>
 {{ choice.text }}
+
 </div>
 
 <div>

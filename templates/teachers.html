@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Giảng Viên{% endblock %}
+
+{% block extra_css %}
+<style>
+.teachers-hero {
+	position: relative;
+	margin-bottom: 18px;
+	overflow: hidden;
+	border-radius: 0 0 24px 24px;
+	background:
+		radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.24), transparent 45%),
+		radial-gradient(circle at 90% 30%, rgba(16, 185, 129, 0.18), transparent 40%),
+		linear-gradient(135deg, #0f172a 0%, #1e3a8a 45%, #0ea5e9 100%);
+	color: #f8fbff;
+}
+
+.teachers-hero .container {
+	padding: 44px 16px 52px;
+}
+
+.teachers-hero h1 {
+	margin: 0 0 10px;
+	font-size: 2.2rem;
+	letter-spacing: -0.02em;
+}
+
+.teachers-hero p {
+	margin: 0;
+	color: rgba(241, 245, 249, 0.94);
+	max-width: 740px;
+}
+
+.teachers-page {
+	display: grid;
+	grid-template-columns: 300px 1fr;
+	gap: 24px;
+	padding: 26px 0 42px;
+}
+
+.teacher-sidebar {
+	position: sticky;
+	top: 16px;
+	align-self: start;
+	background: #ffffff;
+	border: 1px solid #dbe5f1;
+	border-radius: 16px;
+	padding: 18px;
+	box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.teacher-sidebar h2 {
+	margin: 0 0 8px;
+	font-size: 1.22rem;
+}
+
+.teacher-sidebar p {
+	margin: 0 0 14px;
+	color: #64748b;
+	font-size: 0.9rem;
+}
+
+.teacher-filter-form {
+	display: grid;
+	gap: 12px;
+}
+
+.teacher-filter-form label {
+	display: block;
+	margin-bottom: 5px;
+	font-size: 12px;
+	letter-spacing: 0.03em;
+	color: #334155;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.teacher-filter-form input,
+.teacher-filter-form select {
+	width: 100%;
+	border: 1px solid #cbd8e7;
+	border-radius: 10px;
+	padding: 10px 11px;
+	font-size: 14px;
+	background: #f8fbff;
+}
+
+.teacher-filter-form input:focus,
+.teacher-filter-form select:focus {
+	border-color: #2563eb;
+	outline: none;
+	box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.16);
+	background: #fff;
+}
+
+.teacher-filter-actions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+.btn-apply,
+.btn-clear {
+	border-radius: 10px;
+	min-height: 40px;
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+}
+
+.btn-apply {
+	border: 0;
+	background: linear-gradient(135deg, #2563eb, #1d4ed8);
+	color: #fff;
+	cursor: pointer;
+}
+
+.btn-clear {
+	border: 1px solid #c8d5e8;
+	color: #1e3a8a;
+	background: #fff;
+}
+
+.teacher-main h2 {
+	margin: 0 0 16px;
+	color: #0f172a;
+}
+
+.teacher-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 18px;
+}
+
+.teacher-card {
+	border: 1px solid #dce8f7;
+	border-radius: 16px;
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+	overflow: hidden;
+}
+
+.teacher-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px;
+}
+
+.teacher-avatar {
+	width: 58px;
+	height: 58px;
+	border-radius: 50%;
+	overflow: hidden;
+	background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+	color: #1d4ed8;
+	font-weight: 800;
+	font-size: 22px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.teacher-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.teacher-name {
+	margin: 0;
+	font-size: 1.04rem;
+	color: #0f172a;
+}
+
+.teacher-username {
+	margin: 4px 0 0;
+	color: #64748b;
+	font-size: 0.87rem;
+}
+
+.teacher-bio {
+	margin: 0;
+	padding: 0 16px;
+	color: #334155;
+	font-size: 0.9rem;
+	min-height: 42px;
+}
+
+.teacher-stats {
+	margin: 16px;
+	padding: 12px;
+	border: 1px solid #dbe6f5;
+	border-radius: 12px;
+	background: #f1f6ff;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+}
+
+.teacher-stat {
+	text-align: center;
+}
+
+.teacher-stat strong {
+	display: block;
+	color: #1e3a8a;
+	font-size: 1.05rem;
+}
+
+.teacher-stat span {
+	font-size: 0.74rem;
+	color: #475569;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.teacher-card-actions {
+	padding: 0 16px 16px;
+}
+
+.teacher-card-actions a {
+	width: 100%;
+	min-height: 40px;
+	border-radius: 10px;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	text-decoration: none;
+	font-weight: 700;
+	color: #fff;
+	background: linear-gradient(135deg, #0f766e, #0d9488);
+}
+
+.teacher-empty {
+	border: 1px dashed #bfd2ef;
+	border-radius: 14px;
+	background: #f8fbff;
+	padding: 36px 20px;
+	text-align: center;
+}
+
+@media (max-width: 980px) {
+	.teachers-page {
+		grid-template-columns: 1fr;
+	}
+
+	.teacher-sidebar {
+		position: static;
+	}
+}
+
+@media (max-width: 640px) {
+	.teachers-hero .container {
+		padding-top: 34px;
+		padding-bottom: 38px;
+	}
+
+	.teachers-hero h1 {
+		font-size: 1.75rem;
+	}
+
+	.teacher-filter-actions {
+		grid-template-columns: 1fr;
+	}
+
+	.teacher-stats {
+		grid-template-columns: 1fr 1fr 1fr;
+	}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="teachers-hero">
+	<div class="container">
+		<h1>Đội ngũ giảng viên</h1>
+		<p>Tìm giảng viên theo môn, lớp, cấp học và xem nhanh số lượng khóa học, học viên đã duyệt, số bài ôn luyện.</p>
+	</div>
+</section>
+
+<div class="container teachers-page">
+	<aside class="teacher-sidebar">
+		<h2>Lọc giảng viên</h2>
+		<p>Tinh chỉnh theo mục tiêu học tập của bạn.</p>
+
+		<form method="get" class="teacher-filter-form">
+			<div>
+				<label for="q">Từ khóa</label>
+				<input id="q" type="text" name="q" value="{{ q|default:'' }}" placeholder="Tên giảng viên, mô tả, khóa học...">
+			</div>
+
+			<div>
+				<label for="level">Cấp học</label>
+				<select id="level" name="level">
+					<option value="">Tất cả cấp</option>
+					{% for level in levels %}
+						<option value="{{ level.id }}" {% if request.GET.level == level.id|stringformat:'s' %}selected{% endif %}>{{ level.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+
+			<div>
+				<label for="grade">Lớp</label>
+				<select id="grade" name="grade">
+					<option value="">Tất cả lớp</option>
+					{% for grade in grades %}
+						<option value="{{ grade.id }}" {% if request.GET.grade == grade.id|stringformat:'s' %}selected{% endif %}>{{ grade.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+
+			<div>
+				<label for="subject">Môn học</label>
+				<select id="subject" name="subject">
+					<option value="">Tất cả môn</option>
+					{% for subject in subjects %}
+						<option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:'s' %}selected{% endif %}>{{ subject.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+
+			<div class="teacher-filter-actions">
+				<button type="submit" class="btn-apply">Áp dụng</button>
+				<a href="{% url 'teachers_statistics' %}" class="btn-clear">Xóa lọc</a>
+			</div>
+		</form>
+	</aside>
+
+	<main class="teacher-main">
+		<h2>Giảng viên nổi bật</h2>
+
+		<div class="teacher-grid">
+			{% for teacher in teachers %}
+				<article class="teacher-card">
+					<div class="teacher-head">
+						<div class="teacher-avatar">
+							{% if teacher.avatar %}
+								<img src="{{ teacher.avatar.url }}" alt="{{ teacher.user.username }}">
+							{% else %}
+								{% if teacher.user.first_name %}
+									{{ teacher.user.first_name|first|upper }}
+								{% else %}
+									{{ teacher.user.username|first|upper }}
+								{% endif %}
+							{% endif %}
+						</div>
+
+						<div>
+							<h3 class="teacher-name">
+								{% if teacher.user.first_name or teacher.user.last_name %}
+									{{ teacher.user.first_name }} {{ teacher.user.last_name }}
+								{% else %}
+									{{ teacher.user.username }}
+								{% endif %}
+							</h3>
+							<p class="teacher-username">@{{ teacher.user.username }}</p>
+						</div>
+					</div>
+
+					<p class="teacher-bio">{{ teacher.bio|default:'Giảng viên chưa cập nhật mô tả.'|truncatewords:24 }}</p>
+
+					<div class="teacher-stats">
+						<div class="teacher-stat">
+							<strong>{{ teacher.courses_count|default:0 }}</strong>
+							<span>Khóa học</span>
+						</div>
+						<div class="teacher-stat">
+							<strong>{{ teacher.approved_students|default:0 }}</strong>
+							<span>Học viên</span>
+						</div>
+						<div class="teacher-stat">
+							<strong>{{ teacher.quizzes_count|default:0 }}</strong>
+							<span>Ôn luyện</span>
+						</div>
+					</div>
+
+					<div class="teacher-card-actions">
+						<a href="{% url 'courses' %}?teacher={{ teacher.user.id }}">Xem khóa học</a>
+					</div>
+				</article>
+			{% empty %}
+				<div class="teacher-empty">
+					<h3>Chưa có dữ liệu giảng viên phù hợp</h3>
+					<p>Thử thay đổi điều kiện lọc hoặc quay lại sau.</p>
+				</div>
+			{% endfor %}
+		</div>
+
+		{% include "_pagination.html" %}
+	</main>
+</div>
+{% endblock %}

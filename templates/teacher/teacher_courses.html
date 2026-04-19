@@ -4,7 +4,7 @@
 {% block title %}Quản lý khóa học{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'techer.css' %}?v=20260405-2">
+<link rel="stylesheet" href="{% static 'techer.css' %}?v=3">
 {% endblock %}
 
 {% block content %}
@@ -24,7 +24,7 @@
         {% for course in courses %}
         
         <!-- 👉 CLICK NGUYÊN CARD -->
-        <a href="/teacher/course/{{ course.id }}/" class="course-link">
+        <a href="{% url 'teacher_course_detail' course.id %}" class="course-link">
 
             <div class="course-card">
 

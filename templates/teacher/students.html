@@ -1,0 +1,419 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Học viên của tôi{% endblock %}
+
+{% block extra_css %}
+<style>
+.students-page {
+    display: grid;
+    gap: 22px;
+    padding: 12px 0 36px;
+}
+
+.students-hero {
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 36%),
+        radial-gradient(circle at top right, rgba(16, 185, 129, 0.18), transparent 32%),
+        linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0369a1 100%);
+    color: #f8fbff;
+    padding: 28px 28px 32px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+}
+
+.students-hero h1 {
+    margin: 0 0 8px;
+    font-size: 2rem;
+}
+
+.students-hero p {
+    margin: 0;
+    color: rgba(241, 245, 249, 0.92);
+}
+
+.students-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.summary-card {
+    background: #fff;
+    border: 1px solid #dbe5f1;
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.summary-card .label {
+    display: block;
+    margin-bottom: 6px;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.summary-card .value {
+    font-size: 1.8rem;
+    line-height: 1;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #dbe5f1;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.filter-bar input {
+    flex: 1;
+    border: 1px solid #cbd8e7;
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-size: 14px;
+    background: #f8fbff;
+}
+
+.filter-bar input:focus {
+    outline: none;
+    background: #fff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.btn-search,
+.btn-reset,
+.btn-course {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 700;
+    border-radius: 10px;
+}
+
+.btn-search {
+    border: 0;
+    padding: 11px 16px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+}
+
+.btn-reset {
+    padding: 11px 16px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #334155;
+}
+
+.students-list {
+    display: grid;
+    gap: 16px;
+}
+
+.student-card {
+    background: #fff;
+    border: 1px solid #dbe5f1;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.07);
+}
+
+.student-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e6edf7;
+}
+
+.student-main {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    min-width: 0;
+}
+
+.student-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1d4ed8;
+    font-weight: 800;
+    font-size: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.student-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.student-name {
+    margin: 0;
+    font-size: 1.08rem;
+    color: #0f172a;
+}
+
+.student-meta {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+.student-stats {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.stat-pill {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 92px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f1f6ff;
+    border: 1px solid #dbe8fb;
+}
+
+.stat-pill strong {
+    font-size: 1.2rem;
+    color: #1e3a8a;
+}
+
+.stat-pill span {
+    margin-top: 2px;
+    font-size: 0.74rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.student-courses {
+    padding: 18px 20px 20px;
+}
+
+.student-courses h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.course-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.course-tag {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #dbe5f1;
+    background: #f8fbff;
+    min-width: 220px;
+}
+
+.course-tag strong {
+    color: #0f172a;
+    font-size: 0.95rem;
+}
+
+.course-tag span {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.status-approved {
+    color: #166534;
+}
+
+.status-paid {
+    color: #b45309;
+}
+
+.status-pending {
+    color: #b91c1c;
+}
+
+.course-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-course {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #0f766e, #0d9488);
+    color: #fff;
+}
+
+.student-empty {
+    background: #fff;
+    border: 1px dashed #bfd2ef;
+    border-radius: 16px;
+    padding: 34px 20px;
+    text-align: center;
+}
+
+@media (max-width: 960px) {
+    .students-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .student-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .student-stats {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .students-hero {
+        padding: 22px;
+    }
+
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-actions {
+        width: 100%;
+    }
+
+    .btn-search,
+    .btn-reset {
+        flex: 1;
+    }
+
+    .course-tag {
+        min-width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="students-page">
+    <section class="students-hero">
+        <h1>Học viên của tôi</h1>
+        <p>Danh sách học viên đã đăng ký những khóa học của bạn, kèm tổng số khóa học mỗi người đã tham gia.</p>
+    </section>
+
+    <section class="students-summary">
+        <div class="summary-card">
+            <span class="label">Tổng học viên</span>
+            <div class="value">{{ total_students|default:0 }}</div>
+        </div>
+        <div class="summary-card">
+            <span class="label">Tổng lượt đăng ký</span>
+            <div class="value">{{ total_registrations|default:0 }}</div>
+        </div>
+        <div class="summary-card">
+            <span class="label">Số khóa có học viên</span>
+            <div class="value">{{ page_obj.paginator.count|default:0 }}</div>
+        </div>
+    </section>
+
+    <form method="get" class="filter-bar">
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Tìm theo tên học viên, email hoặc tên khóa học...">
+        <div class="filter-actions">
+            <button type="submit" class="btn-search">Tìm kiếm</button>
+            <a href="{% url 'teacher_students' %}" class="btn-reset">Xóa lọc</a>
+        </div>
+    </form>
+
+    <section class="students-list">
+        {% for item in students %}
+            <article class="student-card">
+                <div class="student-head">
+                    <div class="student-main">
+                        <div class="student-avatar">
+                            {% if item.avatar_url %}
+                                <img src="{{ item.avatar_url }}" alt="{{ item.display_name }}">
+                            {% else %}
+                                {% if item.display_name %}
+                                    {{ item.display_name|first|upper }}
+                                {% else %}
+                                    {{ item.student.username|first|upper }}
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <h2 class="student-name">
+                                {{ item.display_name }}
+                            </h2>
+                            <p class="student-meta">
+                                {% if item.email %}{{ item.email }}{% else %}Chưa có email{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="student-stats">
+                        <div class="stat-pill">
+                            <strong>{{ item.total_registered }}</strong>
+                            <span>Khóa đã đăng ký</span>
+                        </div>
+                        <div class="stat-pill">
+                            <strong>{{ item.total_approved }}</strong>
+                            <span>Đã duyệt</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="student-courses">
+                    <h3>Danh sách khóa học đã đăng ký</h3>
+                    <div class="course-tags">
+                        {% for enrollment in item.courses %}
+                            <div class="course-tag">
+                                <strong>{{ enrollment.course_title }}</strong>
+                                <span class="status-{{ enrollment.status_code }}">
+                                    Trạng thái: {{ enrollment.status }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <div class="student-empty">
+                <h3>Chưa có học viên nào</h3>
+                <p>Hiện chưa có đăng ký nào ở các khóa học của bạn.</p>
+            </div>
+        {% endfor %}
+    </section>
+
+    {% include "_pagination.html" %}
+</div>
+{% endblock %}

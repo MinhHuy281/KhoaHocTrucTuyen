@@ -28,7 +28,7 @@
             {% else %}
                 <a href="{% url 'login' %}?next={% url 'quiz_list_all' %}" class="menu-item">Ôn Luyện</a>
             {% endif %}
-            <a href="#">Giảng viên</a>
+            <a href="{% url 'teachers_statistics' %}">Giảng viên</a>
             <a href="#">Liên hệ</a>
         </div>
 

@@ -90,7 +90,7 @@
             </div>
             <div class="course-footer">
               <span class="price">{{ course.price|format_vnd }} VNĐ</span>
-              <a href="/course/{{ course.id }}/" class="btn-detail">Xem chi tiết</a>
+              <a href="{% url 'course_detail' course.id %}" class="btn-detail">Xem chi tiết</a>
             </div>
           </div>
         </div>
