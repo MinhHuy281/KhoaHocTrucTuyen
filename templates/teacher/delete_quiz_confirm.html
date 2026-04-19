@@ -1,0 +1,201 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Xóa bài ôn luyện{% endblock %}
+
+{% block content %}
+<div class="teacher-container">
+    <div class="delete-confirm-box">
+        <div class="delete-icon">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+
+        <h2>Xác nhận xóa bài ôn luyện</h2>
+
+        <div class="quiz-info">
+            <p class="quiz-title">{{ quiz.title }}</p>
+            <p class="quiz-course">Khóa học: <strong>{{ quiz.course.title }}</strong></p>
+            <p class="quiz-questions">Số câu hỏi: <strong>{{ quiz.questions.count }}</strong></p>
+        </div>
+
+        <div class="warning-message">
+            <i class="bi bi-exclamation-circle"></i>
+            <p>Bạn sắp xóa bài ôn luyện này. Hành động này <strong>không thể hoàn tác</strong>. Toàn bộ câu hỏi, lựa chọn, và kết quả làm bài của học viên sẽ bị xóa.</p>
+        </div>
+
+        <form method="POST" class="delete-form">
+            {% csrf_token %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn-delete-confirm">
+                    <i class="bi bi-trash"></i> Xác nhận xóa
+                </button>
+                <a href="{% url 'teacher_quiz_management' %}" class="btn-cancel">
+                    <i class="bi bi-x-circle"></i> Hủy
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.teacher-container {
+    max-width: 600px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+.delete-confirm-box {
+    background-color: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-align: center;
+}
+
+.delete-icon {
+    font-size: 60px;
+    color: #dc3545;
+    margin-bottom: 20px;
+}
+
+.delete-confirm-box h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.quiz-info {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.quiz-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
+}
+
+.quiz-course,
+.quiz-questions {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 8px 0;
+}
+
+.quiz-course strong,
+.quiz-questions strong {
+    color: #333;
+}
+
+.warning-message {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 30px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.warning-message i {
+    color: #ffc107;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.warning-message p {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+    text-align: left;
+}
+
+.delete-form {
+    margin-top: 30px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-delete-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #dc3545;
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    font-weight: 500;
+}
+
+.btn-delete-confirm:hover {
+    background-color: #c82333;
+}
+
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #6c757d;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    font-weight: 500;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6268;
+}
+
+@media (max-width: 600px) {
+    .teacher-container {
+        margin: 30px auto;
+    }
+
+    .delete-confirm-box {
+        padding: 25px;
+    }
+
+    .delete-icon {
+        font-size: 50px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-delete-confirm,
+    .btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .warning-message {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .warning-message i {
+        font-size: 20px;
+    }
+}
+</style>
+{% endblock %}

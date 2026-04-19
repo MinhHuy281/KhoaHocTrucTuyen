@@ -4,16 +4,87 @@
 {% block title %}Quản lý ôn luyện{% endblock %}
 
 {% block content %}
-<div class="teacher-container">
-    <h2>📊 Quản lý ôn luyện</h2>
+<div class="teacher-container quiz-dashboard">
+    <div class="quiz-dashboard-header">
+        <div>
+            <h2>📊 Quản lý ôn luyện</h2>
+            <p>Tổng số bài ôn luyện bạn đã tạo: <strong>{{ quiz_count|default:0 }}</strong></p>
+        </div>
+        <a href="{% url 'teacher_create_quiz_standalone' %}" class="btn-primary">
+            <i class="bi bi-plus-circle"></i> Tạo ôn luyện
+        </a>
+    </div>
+
+    {% if quizzes %}
+        <div class="quiz-table-wrap">
+            <table class="quiz-table">
+                <thead>
+                    <tr>
+                        <th>Tên bài ôn luyện</th>
+                        <th>Khóa học</th>
+                        <th>Số câu hỏi</th>
+                        <th>Lượt làm</th>
+                        <th>Thời gian</th>
+                        <th>Ngày tạo</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for quiz in quizzes %}
+                        <tr>
+                            <td>
+                                <strong>{{ quiz.title }}</strong>
+                                {% if quiz.description %}
+                                    <div class="quiz-desc">{{ quiz.description|truncatewords:12 }}</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ quiz.course.title }}</td>
+                            <td><span class="badge-info">{{ quiz.question_count }}</span></td>
+                            <td><span class="badge-success">{{ quiz.attempt_count }}</span></td>
+                            <td>{{ quiz.minutes }} phút</td>
+                            <td>{{ quiz.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="#quiz-{{ quiz.id }}" class="btn-view" title="Xem kết quả">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'teacher_edit_quiz' quiz.id %}" class="btn-edit" title="Sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'teacher_delete_quiz' quiz.id %}" class="btn-delete" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>Bạn chưa tạo bài ôn luyện nào.</p>
+            <a href="{% url 'teacher_create_quiz_standalone' %}" class="btn-primary">Tạo bài ôn luyện đầu tiên</a>
+        </div>
+    {% endif %}
+
+    {% include "_pagination.html" with page_obj=quiz_page_obj query_string=quiz_query_string page_param='quiz_page' %}
 
     {% for data in quiz_data %}
-        <div class="quiz-section">
-            <h3>{{ data.quiz.title }} - {{ data.quiz.course.title }}</h3>
-            <p><strong>Số câu hỏi:</strong> {{ data.quiz.questions.count }}</p>
+        <div class="quiz-section" id="quiz-{{ data.quiz.id }}">
+            <div class="quiz-section-head">
+                <div>
+                    <h3>{{ data.quiz.title }} - {{ data.quiz.course.title }}</h3>
+                    <p>Số câu hỏi: <strong>{{ data.quiz.question_count }}</strong></p>
+                </div>
+                <div class="section-actions">
+                    <a href="{% url 'teacher_edit_quiz' data.quiz.id %}" class="btn-edit-link">Sửa</a>
+                    <a href="{% url 'teacher_delete_quiz' data.quiz.id %}" class="btn-delete-link">Xóa</a>
+                </div>
+            </div>
 
             {% if data.attempts %}
-                <table class="table">
+                <table class="attempt-table">
                     <thead>
                         <tr>
                             <th>Học viên</th>
@@ -49,66 +120,151 @@
                 <p>Chưa có học viên nào làm bài này.</p>
             {% endif %}
         </div>
-        <hr>
-    {% empty %}
-        <p>Bạn chưa tạo bài ôn luyện nào.</p>
     {% endfor %}
 
-    {% include "_pagination.html" with page_obj=quiz_page_obj query_string=quiz_query_string page_param='quiz_page' %}
-
-    <a href="/teacher/courses/" class="btn-secondary">⬅ Quay lại</a>
+    <a href="/teacher/courses/" class="btn-back">⬅ Quay lại</a>
 </div>
 
 <style>
-.quiz-section {
-    margin-bottom: 30px;
+.quiz-dashboard {
+    max-width: 1240px;
+    margin: 30px auto;
+    padding: 0 20px;
 }
 
-.table {
+.quiz-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: #fff;
+    text-decoration: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quiz-table-wrap {
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.quiz-table,
+.attempt-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
 }
 
-.table th, .table td {
-    border: 1px solid #ddd;
-    padding: 8px;
+.quiz-table th,
+.quiz-table td,
+.attempt-table th,
+.attempt-table td {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 14px 12px;
     text-align: left;
+    vertical-align: top;
 }
 
-.table th {
-    background-color: #f2f2f2;
+.quiz-table th,
+.attempt-table th {
+    background: #f8fafc;
+    font-weight: 700;
 }
 
-.badge-success {
-    background-color: #28a745;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 3px;
+.quiz-desc {
+    margin-top: 6px;
+    color: #6b7280;
+    font-size: 13px;
 }
 
+.badge-info,
+.badge-success,
 .badge-warning {
-    background-color: #ffc107;
-    color: black;
-    padding: 2px 6px;
-    border-radius: 3px;
-}
-
-.btn-view-detail {
-    background-color: #667eea;
-    color: white;
-    padding: 5px 12px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
     display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
 }
 
-.btn-view-detail:hover {
-    background-color: #5568d3;
+.badge-info { background: #e0f2fe; color: #0369a1; }
+.badge-success { background: #dcfce7; color: #166534; }
+.badge-warning { background: #fef3c7; color: #92400e; }
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-view,
+.btn-edit,
+.btn-delete,
+.btn-view-detail,
+.btn-edit-link,
+.btn-delete-link,
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-decoration: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+.btn-view { background: #0ea5e9; color: #fff; }
+.btn-edit, .btn-edit-link { background: #f59e0b; color: #fff; }
+.btn-delete, .btn-delete-link { background: #ef4444; color: #fff; }
+.btn-view-detail { background: #667eea; color: #fff; }
+.btn-back { margin-top: 20px; background: #6b7280; color: #fff; }
+
+.quiz-section {
+    margin-top: 28px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.quiz-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.section-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    background: #fff;
+    border-radius: 12px;
+}
+
+@media (max-width: 768px) {
+    .quiz-dashboard-header,
+    .quiz-section-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .action-buttons,
+    .section-actions {
+        flex-wrap: wrap;
+    }
 }
 </style>
 

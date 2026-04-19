@@ -11,6 +11,9 @@ urlpatterns = [
     # Danh sách khóa học
     path('courses/', views.courses, name='courses'),
 
+    # Danh sách giảng viên + thống kê
+    path('teachers/', views.teachers_statistics, name='teachers_statistics'),
+
     # Chi tiết khóa học
     path('course/<int:course_id>/', views.course_detail, name='course_detail'),
 
@@ -46,6 +49,8 @@ urlpatterns = [
 
     path('teacher/profile/', views.teacher_profile, name='teacher_profile'),
 
+    path('teacher/students/', views.teacher_students, name='teacher_students'),
+
     path('teacher/courses/', views.teacher_courses, name='teacher_courses'),
 
     path('teacher/create/', views.teacher_create_course, name='create_courses'),
@@ -61,6 +66,15 @@ urlpatterns = [
     path('teacher/quizzes/', views.teacher_quiz_results, name='teacher_quiz_results'),
     
     path('teacher/attempt/<int:attempt_id>/', views.teacher_attempt_detail, name='teacher_attempt_detail'),
+    
+    # ===== QUIZ MANAGEMENT (Quản lý ôn luyện) =====
+    path('teacher/quiz-management/', views.teacher_quiz_management, name='teacher_quiz_management'),
+    
+    path('teacher/quiz/create/', views.teacher_create_quiz_standalone, name='teacher_create_quiz_standalone'),
+    
+    path('teacher/quiz/<int:quiz_id>/edit/', views.teacher_edit_quiz, name='teacher_edit_quiz'),
+    
+    path('teacher/quiz/<int:quiz_id>/delete/', views.teacher_delete_quiz, name='teacher_delete_quiz'),
 
 
         # ====================== API REST ======================

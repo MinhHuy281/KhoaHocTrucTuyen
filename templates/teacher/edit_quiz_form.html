@@ -1,0 +1,379 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Chỉnh sửa bài ôn luyện{% endblock %}
+
+{% block content %}
+<div class="teacher-container quiz-form-container">
+    <h2>Chỉnh sửa bài ôn luyện</h2>
+
+    <form method="POST" class="quiz-form">
+        {% csrf_token %}
+
+        <!-- Thông tin chung -->
+        <fieldset>
+            <legend>Thông tin chung</legend>
+
+            <div class="form-group">
+                <label for="course_id">Khóa học <span class="required">*</span></label>
+                <select id="course_id" name="course_id" disabled>
+                    <option value="{{ quiz.course.id }}" selected>{{ quiz.course.title }}</option>
+                </select>
+                <small>Không thể thay đổi khóa học. Tạo bài ôn luyện mới nếu muốn.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Bài học: {{ quiz.lesson.title if quiz.lesson else "Không chọn" }}</label>
+                <small>Hãy liên hệ admin nếu cần thay đổi bài học gắn liền.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="title">Tên bài ôn luyện <span class="required">*</span></label>
+                <input type="text" id="title" name="title" required 
+                    value="{{ quiz.title }}"
+                    placeholder="Ví dụ: Ôn luyện chương 1">
+            </div>
+
+            <div class="form-group">
+                <label for="description">Mô tả</label>
+                <textarea id="description" name="description" rows="3"
+                    placeholder="Mô tả bài ôn luyện (không bắt buộc)">{{ quiz.description }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="time_limit">Thời gian giới hạn (phút)</label>
+                <input type="number" id="time_limit" name="time_limit" min="1" 
+                    value="{{ quiz.minutes }}">
+                <small>Để trống hoặc 0 nếu không giới hạn thời gian</small>
+            </div>
+        </fieldset>
+
+        <!-- Thông tin câu hỏi -->
+        <fieldset>
+            <legend>Thông tin bài ôn luyện</legend>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">Số câu hỏi</span>
+                    <span class="value">{{ questions.count }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Lượt làm bài</span>
+                    <span class="value">{{ quiz.userquizattempt_set.count }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Ngày tạo</span>
+                    <span class="value">{{ quiz.created_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Cập nhật lần cuối</span>
+                    <span class="value">{{ quiz.updated_at|date:"d/m/Y H:i" }}</span>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Danh sách câu hỏi -->
+        {% if questions %}
+            <fieldset>
+                <legend>Danh sách câu hỏi ({{ questions.count }})</legend>
+                
+                <div class="questions-list">
+                    {% for question in questions %}
+                        <div class="question-preview">
+                            <div class="question-header">
+                                <h5>Câu {{ forloop.counter }}: {{ question.text|truncatewords:20 }}</h5>
+                                <span class="badge badge-points">{{ question.points }} điểm</span>
+                            </div>
+                            <div class="choices-list">
+                                {% for choice in question.choices.all %}
+                                    <div class="choice-item {% if choice.is_correct %}correct{% endif %}">
+                                        <strong>{{ forloop.counter|stringformat:"A" }}.</strong>
+                                        {{ choice.text }}
+                                        {% if choice.is_correct %}
+                                            <span class="correct-badge">✓ Đáp án đúng</span>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <p class="info-message">
+                    <i class="bi bi-info-circle"></i>
+                    Để chỉnh sửa câu hỏi chi tiết, vui lòng liên hệ admin hoặc xóa bài ôn luyện và tạo mới.
+                </p>
+            </fieldset>
+        {% endif %}
+
+        <!-- Buttons -->
+        <div class="form-actions">
+            <button type="submit" class="btn-save">
+                <i class="bi bi-check-circle"></i> Lưu thay đổi
+            </button>
+            <a href="{% url 'teacher_quiz_management' %}" class="btn-cancel">
+                <i class="bi bi-x-circle"></i> Hủy
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.teacher-container {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.quiz-form-container h2 {
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.quiz-form {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+fieldset {
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+legend {
+    padding: 0 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.form-group input[disabled] {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 12px;
+}
+
+.required {
+    color: #dc3545;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    border-left: 4px solid #667eea;
+}
+
+.info-item .label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.info-item .value {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.questions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.question-preview {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    border-left: 4px solid #667eea;
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.question-header h5 {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+    flex: 1;
+}
+
+.badge-points {
+    background-color: #e7f3ff;
+    color: #0066cc;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.choices-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.choice-item {
+    padding: 10px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.choice-item.correct {
+    background-color: #e8f5e9;
+    border-color: #2e7d32;
+}
+
+.correct-badge {
+    display: inline-block;
+    background-color: #2e7d32;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-left: auto;
+}
+
+.info-message {
+    background-color: #e7f3ff;
+    color: #0066cc;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #667eea;
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-save:hover {
+    background-color: #5568d3;
+}
+
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #6c757d;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6268;
+}
+
+@media (max-width: 768px) {
+    .quiz-form {
+        padding: 20px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-save, .btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .question-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .badge-points {
+        align-self: flex-start;
+    }
+}
+</style>
+{% endblock %}

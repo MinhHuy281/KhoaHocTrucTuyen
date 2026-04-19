@@ -85,7 +85,7 @@
                     <h3>{{ course.title }}</h3>
                     <p>Môn: {{ course.subject }} • Lớp: {{ course.grade }} • Cấp: {{ course.level }}</p>
                     <div class="price">{{ course.price|format_vnd }} VNĐ</div>
-                    <a href="/course/{{ course.id }}" class="btn-detail">Xem chi tiết →</a>
+                    <a href="{% url 'course_detail' course.id %}" class="btn-detail">Xem chi tiết →</a>
                 </div>
             </div>
             {% endfor %}

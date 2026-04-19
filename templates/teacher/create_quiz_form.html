@@ -1,0 +1,430 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}{% if action == 'edit' %}Chỉnh sửa bài ôn luyện{% else %}Tạo bài ôn luyện{% endif %}{% endblock %}
+
+{% block content %}
+{% load static %}
+<div class="teacher-container quiz-form-container">
+    <h2>{% if action == 'edit' %}Chỉnh sửa{% else %}Tạo{% endif %} bài ôn luyện</h2>
+
+    <form method="POST" class="quiz-form">
+        {% csrf_token %}
+
+        <fieldset>
+            <legend>Thông tin chung</legend>
+
+            <div class="form-group">
+                <label for="course_id">Khóa học <span class="required">*</span></label>
+                <select id="course_id" name="course_id" required data-selected-course="{% if action == 'edit' %}{{ quiz.course_id }}{% endif %}" onchange="loadLessons()">
+                    <option value="">-- Chọn khóa học --</option>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}" {% if action == 'edit' and quiz.course_id == course.id %}selected{% endif %}>{{ course.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="lesson_id">Bài học (tùy chọn)</label>
+                <select id="lesson_id" name="lesson_id" data-selected-lesson="{% if action == 'edit' and quiz.lesson_id %}{{ quiz.lesson_id }}{% endif %}">
+                    <option value="">-- Không chọn --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="title">Tên bài ôn luyện <span class="required">*</span></label>
+                <input type="text" id="title" name="title" required value="{% if action == 'edit' %}{{ quiz.title }}{% endif %}" placeholder="Ví dụ: Ôn luyện chương 1">
+            </div>
+
+            <div class="form-group">
+                <label for="description">Mô tả</label>
+                <textarea id="description" name="description" rows="3" placeholder="Mô tả bài ôn luyện (không bắt buộc)">{% if action == 'edit' %}{{ quiz.description }}{% endif %}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="time_limit">Thời gian giới hạn (phút)</label>
+                <input type="number" id="time_limit" name="time_limit" min="0" value="{% if action == 'edit' %}{{ quiz.minutes }}{% else %}10{% endif %}">
+                <small>Nhập 0 nếu không giới hạn thời gian</small>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Câu hỏi</legend>
+
+            <div id="questions-container">
+                {% if questions %}
+                    {% for question in questions %}
+                    <div class="question-group" data-question-index="{{ forloop.counter0 }}">
+                        <h4>Câu {{ forloop.counter }}</h4>
+                        <button type="button" class="btn-remove-question" title="Xóa câu hỏi">
+                            <i class="bi bi-trash"></i>
+                        </button>
+
+                        <div class="form-group">
+                            <label>Nội dung câu hỏi <span class="required">*</span></label>
+                            <textarea name="question[]" required class="question-text">{{ question.text }}</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Điểm</label>
+                            <input type="number" name="points[]" min="1" value="{{ question.points }}">
+                        </div>
+
+                        <div class="options-grid">
+                            <div class="option-group">
+                                <label>A</label>
+                                <textarea name="option_a[]" class="option-text">{{ question.options.A }}</textarea>
+                            </div>
+                            <div class="option-group">
+                                <label>B</label>
+                                <textarea name="option_b[]" class="option-text">{{ question.options.B }}</textarea>
+                            </div>
+                            <div class="option-group">
+                                <label>C</label>
+                                <textarea name="option_c[]" class="option-text">{{ question.options.C }}</textarea>
+                            </div>
+                            <div class="option-group">
+                                <label>D</label>
+                                <textarea name="option_d[]" class="option-text">{{ question.options.D }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Đáp án đúng</label>
+                            <select name="correct_answer[]" required>
+                                <option value="">-- Chọn đáp án đúng --</option>
+                                <option value="A" {% if question.correct_answer == 'A' %}selected{% endif %}>A</option>
+                                <option value="B" {% if question.correct_answer == 'B' %}selected{% endif %}>B</option>
+                                <option value="C" {% if question.correct_answer == 'C' %}selected{% endif %}>C</option>
+                                <option value="D" {% if question.correct_answer == 'D' %}selected{% endif %}>D</option>
+                            </select>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="question-group" data-question-index="0">
+                        <h4>Câu 1</h4>
+                        <button type="button" class="btn-remove-question" title="Xóa câu hỏi">
+                            <i class="bi bi-trash"></i>
+                        </button>
+
+                        <div class="form-group">
+                            <label>Nội dung câu hỏi <span class="required">*</span></label>
+                            <textarea name="question[]" required class="question-text"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Điểm</label>
+                            <input type="number" name="points[]" min="1" value="1">
+                        </div>
+
+                        <div class="options-grid">
+                            <div class="option-group">
+                                <label>A</label>
+                                <textarea name="option_a[]" class="option-text"></textarea>
+                            </div>
+                            <div class="option-group">
+                                <label>B</label>
+                                <textarea name="option_b[]" class="option-text"></textarea>
+                            </div>
+                            <div class="option-group">
+                                <label>C</label>
+                                <textarea name="option_c[]" class="option-text"></textarea>
+                            </div>
+                            <div class="option-group">
+                                <label>D</label>
+                                <textarea name="option_d[]" class="option-text"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Đáp án đúng</label>
+                            <select name="correct_answer[]" required>
+                                <option value="">-- Chọn đáp án đúng --</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <button type="button" class="btn-add-question" onclick="addQuestion()">
+                <i class="bi bi-plus-circle"></i> Thêm câu hỏi
+            </button>
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-save">
+                <i class="bi bi-check-circle"></i> {% if action == 'edit' %}Cập nhật bài ôn luyện{% else %}Lưu bài ôn luyện{% endif %}
+            </button>
+            <a href="{% url 'teacher_quiz_management' %}" class="btn-cancel">
+                <i class="bi bi-x-circle"></i> Hủy
+            </a>
+        </div>
+    </form>
+</div>
+
+{{ courses_data|json_script:"lessons-data" }}
+
+<script>
+const lessonsData = JSON.parse(document.getElementById('lessons-data').textContent || '{}');
+
+function loadLessons() {
+    const courseSelect = document.getElementById('course_id');
+    const lessonSelect = document.getElementById('lesson_id');
+    const selectedLesson = lessonSelect.dataset.selectedLesson || '';
+
+    lessonSelect.innerHTML = '<option value="">-- Không chọn --</option>';
+
+    if (!courseSelect.value || !lessonsData[courseSelect.value]) {
+        return;
+    }
+
+    lessonsData[courseSelect.value].forEach(function(lesson) {
+        const option = document.createElement('option');
+        option.value = lesson.id;
+        option.textContent = lesson.title;
+        if (String(lesson.id) === String(selectedLesson)) {
+            option.selected = true;
+        }
+        lessonSelect.appendChild(option);
+    });
+}
+
+function addQuestion() {
+    const container = document.getElementById('questions-container');
+    const index = container.querySelectorAll('.question-group').length;
+
+    const questionHTML = `
+        <div class="question-group" data-question-index="${index}">
+            <h4>Câu ${index + 1}</h4>
+            <button type="button" class="btn-remove-question" title="Xóa câu hỏi">
+                <i class="bi bi-trash"></i>
+            </button>
+
+            <div class="form-group">
+                <label>Nội dung câu hỏi <span class="required">*</span></label>
+                <textarea name="question[]" required class="question-text"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Điểm</label>
+                <input type="number" name="points[]" min="1" value="1">
+            </div>
+
+            <div class="options-grid">
+                <div class="option-group">
+                    <label>A</label>
+                    <textarea name="option_a[]" class="option-text"></textarea>
+                </div>
+                <div class="option-group">
+                    <label>B</label>
+                    <textarea name="option_b[]" class="option-text"></textarea>
+                </div>
+                <div class="option-group">
+                    <label>C</label>
+                    <textarea name="option_c[]" class="option-text"></textarea>
+                </div>
+                <div class="option-group">
+                    <label>D</label>
+                    <textarea name="option_d[]" class="option-text"></textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Đáp án đúng</label>
+                <select name="correct_answer[]" required>
+                    <option value="">-- Chọn đáp án đúng --</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                </select>
+            </div>
+        </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', questionHTML);
+    attachRemoveListeners();
+}
+
+function removeQuestion(event) {
+    event.preventDefault();
+    const container = document.getElementById('questions-container');
+    const group = event.currentTarget.closest('.question-group');
+
+    if (container.querySelectorAll('.question-group').length > 1) {
+        group.remove();
+        updateQuestionNumbers();
+    }
+}
+
+function attachRemoveListeners() {
+    document.querySelectorAll('.btn-remove-question').forEach(function(button) {
+        button.removeEventListener('click', removeQuestion);
+        button.addEventListener('click', removeQuestion);
+    });
+}
+
+function updateQuestionNumbers() {
+    document.querySelectorAll('.question-group').forEach(function(group, index) {
+        group.querySelector('h4').textContent = 'Câu ' + (index + 1);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadLessons();
+    attachRemoveListeners();
+});
+</script>
+
+<style>
+.teacher-container {
+    max-width: 980px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.quiz-form-container h2 {
+    margin-bottom: 24px;
+}
+
+.quiz-form {
+    background: #fff;
+    padding: 28px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+fieldset {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    padding: 20px;
+}
+
+legend {
+    padding: 0 10px;
+    font-weight: 700;
+}
+
+.form-group { margin-bottom: 16px; }
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font: inherit;
+}
+
+.form-group textarea { min-height: 84px; resize: vertical; }
+
+.required { color: #dc2626; }
+
+.question-group {
+    position: relative;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #667eea;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.btn-remove-question {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: 0;
+    background: #dc3545;
+    color: #fff;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.option-group {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.option-group label {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.option-text {
+    min-height: 64px;
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 8px;
+    resize: vertical;
+}
+
+.btn-add-question {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    background: #16a34a;
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-top: 8px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 18px;
+}
+
+.btn-save,
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 18px;
+}
+
+.btn-save { background: #667eea; color: #fff; }
+.btn-cancel { background: #6b7280; color: #fff; }
+
+@media (max-width: 768px) {
+    .quiz-form { padding: 18px; }
+    fieldset { padding: 14px; }
+    .options-grid { grid-template-columns: 1fr; }
+    .form-actions { flex-direction: column; }
+    .btn-save,
+    .btn-cancel,
+    .btn-add-question { width: 100%; justify-content: center; }
+}
+</style>
+{% endblock %}

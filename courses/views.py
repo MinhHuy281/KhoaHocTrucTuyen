@@ -4,12 +4,15 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Prefetch
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, logout as django_logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+import json
 import re
+from urllib.parse import parse_qs, urlparse
+from urllib.request import Request, urlopen
 
 # Import models
 from .models import (
@@ -50,6 +53,78 @@ def paginate_request_queryset(request, queryset, per_page=12, page_param='page')
     return page_obj, query_string
 
 
+def build_slide_urls(raw_url):
+    """Chuan hoa link slide de uu tien embed truc tiep va co link tai."""
+    if not raw_url:
+        return "", ""
+
+    slide_url = raw_url.strip()
+
+    # Canva short links redirect to the real design URL.
+    if 'canva.link' in slide_url:
+        try:
+            request = Request(slide_url, method='HEAD')
+            request.add_header('User-Agent', 'Mozilla/5.0')
+            with urlopen(request, timeout=5) as response:
+                redirected_url = response.geturl()
+                if redirected_url:
+                    slide_url = redirected_url
+        except Exception:
+            pass
+
+    parsed = urlparse(slide_url)
+    host = (parsed.netloc or "").lower()
+    path = parsed.path or ""
+    query = parse_qs(parsed.query or "")
+
+    slide_embed_url = slide_url
+    slide_download_url = slide_url
+
+    # Canva
+    if 'canva.com' in host or 'canva.link' in host:
+        if '/view' in slide_url and 'embed' not in slide_url:
+            sep = '&' if '?' in slide_url else '?'
+            slide_embed_url = f"{slide_url}{sep}embed"
+        elif '/design/' in slide_url and '/view' not in slide_url:
+            slide_embed_url = slide_url.rstrip('/') + '/view?embed'
+        elif '/edit' in slide_url:
+            base_url = slide_url.split('/edit')[0]
+            slide_embed_url = f"{base_url}/view?embed"
+
+        sep = '&' if '?' in slide_url else '?'
+        slide_download_url = f"{slide_url}{sep}download=1"
+        return slide_embed_url, slide_download_url
+
+    # Google Slides
+    if 'docs.google.com' in host and '/presentation/' in path:
+        if '/edit' in path:
+            slide_embed_url = slide_url.replace('/edit', '/embed').split('?')[0]
+        elif '/pub' in path:
+            slide_embed_url = slide_url.replace('/pub', '/embed').split('?')[0]
+        elif '/embed' not in path:
+            slide_embed_url = slide_url.rstrip('/') + '/embed'
+
+        slide_download_url = slide_url.replace('/embed', '/export/pdf').replace('/edit', '/export/pdf')
+        return slide_embed_url, slide_download_url
+
+    # Google Drive file preview
+    if 'drive.google.com' in host and '/file/d/' in path:
+        match = re.search(r"/file/d/([^/]+)", path)
+        if match:
+            file_id = match.group(1)
+            slide_embed_url = f"https://drive.google.com/file/d/{file_id}/preview"
+            slide_download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            return slide_embed_url, slide_download_url
+
+    # PDF online: dung Google Docs viewer de tang kha nang nhung
+    if slide_url.lower().endswith('.pdf'):
+        slide_embed_url = f"https://docs.google.com/gview?embedded=1&url={slide_url}"
+        slide_download_url = slide_url
+        return slide_embed_url, slide_download_url
+
+    return slide_embed_url, slide_download_url
+
+
 # Trang chủ
 def index(request):
     courses = Course.objects.all().order_by('-id')
@@ -68,6 +143,7 @@ def courses(request):
     level = request.GET.get("level")
     grade = request.GET.get("grade")
     subject = request.GET.get("subject")
+    teacher = request.GET.get("teacher")
     q = request.GET.get("q")
 
     if level:
@@ -76,6 +152,8 @@ def courses(request):
         courses = courses.filter(grade_id=grade)
     if subject:
         courses = courses.filter(subject_id=subject)
+    if teacher:
+        courses = courses.filter(teacher_id=teacher)
     if q:
         courses = courses.filter(
             Q(title__icontains=q) |
@@ -99,11 +177,67 @@ def courses(request):
     })
 
 
+def teachers_statistics(request):
+    teacher_profiles = UserProfile.objects.filter(role='teacher').select_related('user').annotate(
+        courses_count=Count('user__courses_teaching', distinct=True),
+        approved_students=Count(
+            'user__courses_teaching__enrollments',
+            filter=Q(user__courses_teaching__enrollments__status='approved'),
+            distinct=True,
+        ),
+        quizzes_count=Count('user__courses_teaching__quizzes', distinct=True),
+    )
+
+    level = request.GET.get("level")
+    grade = request.GET.get("grade")
+    subject = request.GET.get("subject")
+    q = request.GET.get("q")
+
+    if level:
+        teacher_profiles = teacher_profiles.filter(user__courses_teaching__level_id=level)
+    if grade:
+        teacher_profiles = teacher_profiles.filter(user__courses_teaching__grade_id=grade)
+    if subject:
+        teacher_profiles = teacher_profiles.filter(user__courses_teaching__subject_id=subject)
+    if q:
+        teacher_profiles = teacher_profiles.filter(
+            Q(user__username__icontains=q)
+            | Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(bio__icontains=q)
+            | Q(user__courses_teaching__title__icontains=q)
+        )
+
+    teacher_profiles = teacher_profiles.distinct().order_by('-courses_count', 'user__username')
+
+    levels = Level.objects.all()
+    grades = Grade.objects.all()
+    subjects = Subject.objects.all()
+
+    page_obj, query_string = paginate_request_queryset(request, teacher_profiles, per_page=6)
+
+    return render(request, "teachers.html", {
+        "teachers": page_obj,
+        "page_obj": page_obj,
+        "query_string": query_string,
+        "levels": levels,
+        "grades": grades,
+        "subjects": subjects,
+        "q": q,
+    })
+
+
 # Chi tiết khóa học
 def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     lessons = course.lessons.all().order_by('order')
     first_lesson = lessons.first()
+    slide_embed_url = ""
+    slide_download_url = ""
+
+    if first_lesson and first_lesson.slide_url:
+        slide_embed_url, slide_download_url = build_slide_urls(first_lesson.slide_url)
+
     lesson_page_obj, lesson_query_string = paginate_request_queryset(
         request,
         lessons,
@@ -140,6 +274,8 @@ def course_detail(request, course_id):
         "lessons": lesson_page_obj,
         "lessons_total": lessons.count(),
         "first_lesson": first_lesson,
+        "slide_embed_url": slide_embed_url,
+        "slide_download_url": slide_download_url,
         "lesson_query_string": lesson_query_string,
         "quiz_count": quiz_count,
         "enrollment": enrollment,
@@ -180,9 +316,17 @@ def lesson_view(request, lesson_id):
         else:
             video_id = url  # fallback nếu nhập sẵn ID
 
+    slide_embed_url = ""
+    slide_download_url = ""
+
+    if lesson.slide_url:
+        slide_embed_url, slide_download_url = build_slide_urls(lesson.slide_url)
+
     return render(request, "lesson.html", {
         "lesson": lesson,
-        "video_id": video_id
+        "video_id": video_id,
+        "slide_embed_url": slide_embed_url,
+        "slide_download_url": slide_download_url,
     })
 
 # ĐĂNG NHẬP HỌC VIÊN
@@ -424,6 +568,7 @@ def user_profile(request):
     )
 
     return render(request, 'user_profile.html', {
+        'current_user': user,
         'profile': profile,
         'purchased_enrollments': enrollment_page_obj,
         'purchased_enrollments_page_obj': enrollment_page_obj,
@@ -579,6 +724,86 @@ def teacher_dashboard(request):
 
 
 @teacher_required
+def teacher_students(request):
+    teacher = request.current_teacher
+    q = (request.GET.get('q') or '').strip()
+
+    enrollment_queryset = Enrollment.objects.filter(
+        course__teacher=teacher
+    ).select_related(
+        'course'
+    ).order_by('-created')
+
+    if q:
+        enrollment_queryset = enrollment_queryset.filter(
+            Q(user__username__icontains=q)
+            | Q(user__first_name__icontains=q)
+            | Q(user__last_name__icontains=q)
+            | Q(user__email__icontains=q)
+            | Q(course__title__icontains=q)
+        )
+
+    students_queryset = User.objects.filter(
+        enrollment__in=enrollment_queryset
+    ).distinct().order_by('username').select_related('profile').prefetch_related(
+        Prefetch('enrollment_set', queryset=enrollment_queryset, to_attr='teacher_enrollments')
+    )
+
+    students_data = []
+    for student in students_queryset:
+        student_enrollments = list(getattr(student, 'teacher_enrollments', []))
+        if not student_enrollments:
+            continue
+
+        avatar_url = ''
+        try:
+            profile = student.profile
+            if profile and profile.avatar:
+                avatar_url = profile.avatar.url
+        except UserProfile.DoesNotExist:
+            profile = None
+
+        course_items = []
+        approved_count = 0
+        for enrollment in student_enrollments:
+            course_items.append({
+                'course_id': enrollment.course_id,
+                'course_title': enrollment.course.title,
+                'status': enrollment.get_status_display(),
+                'status_code': enrollment.status,
+                'created': enrollment.created,
+            })
+            if enrollment.status == 'approved':
+                approved_count += 1
+
+        students_data.append({
+            'student': student,
+            'avatar_url': avatar_url,
+            'display_name': f"{student.first_name} {student.last_name}".strip() if (student.first_name or student.last_name) else student.username,
+            'email': student.email,
+            'total_registered': len(course_items),
+            'total_approved': approved_count,
+            'courses': course_items,
+        })
+
+    page_obj, query_string = paginate_request_queryset(
+        request,
+        students_data,
+        per_page=8,
+        page_param='student_page'
+    )
+
+    return render(request, 'teacher/students.html', {
+        'students': page_obj,
+        'page_obj': page_obj,
+        'query_string': query_string,
+        'q': q,
+        'total_students': len(students_data),
+        'total_registrations': enrollment_queryset.count(),
+    })
+
+
+@teacher_required
 def teacher_profile(request):
     teacher = request.current_teacher
     profile, _ = UserProfile.objects.get_or_create(
@@ -635,6 +860,7 @@ def teacher_profile(request):
     ).count()
 
     return render(request, 'teacher/teacher_profile.html', {
+            'current_teacher': teacher,
         'profile': profile,
         'teaching_courses': teaching_courses,
         'teaching_attempts': teaching_attempts,
@@ -709,13 +935,15 @@ def teacher_create_course(request):
 
         # ✅ THÊM: tạo luôn lesson đầu nếu có video
         video_url = request.POST.get('video_url')
+        slide_url = request.POST.get('slide_url')
         content = request.POST.get('content')
 
-        if video_url or content:
+        if video_url or slide_url or content:
             Lesson.objects.create(
                 course=course,
                 title="Bài học 1",
                 video_url=video_url,
+                slide_url=slide_url,
                 content=content,
                 order=1,
                 is_free_preview=True
@@ -753,6 +981,24 @@ def teacher_edit_course(request, id):
         if image:
             course.image = image
         course.save()
+
+        video_url = request.POST.get('video_url')
+        slide_url = request.POST.get('slide_url')
+        content = request.POST.get('content')
+
+        first_lesson = course.lessons.order_by('order').first()
+        if first_lesson is None:
+            first_lesson = Lesson.objects.create(
+                course=course,
+                title='Bài học 1',
+                order=1,
+                is_free_preview=True,
+            )
+
+        first_lesson.video_url = video_url
+        first_lesson.slide_url = slide_url
+        first_lesson.content = content
+        first_lesson.save()
         
 
         return redirect('/teacher/courses/')
@@ -812,10 +1058,19 @@ def teacher_course_detail(request, id):
     teacher = request.current_teacher
     course = get_object_or_404(Course, id=id, teacher=teacher)
     lessons = course.lessons.all().order_by('order')
+    first_lesson = lessons.first()
+    slide_embed_url = ""
+    slide_download_url = ""
+
+    if first_lesson and first_lesson.slide_url:
+        slide_embed_url, slide_download_url = build_slide_urls(first_lesson.slide_url)
 
     return render(request, 'teacher/course_detail.html', {
         'course': course,
-        'lessons': lessons
+        'lessons': lessons,
+        'first_lesson': first_lesson,
+        'slide_embed_url': slide_embed_url,
+        'slide_download_url': slide_download_url,
     })
 
 @teacher_required
@@ -824,11 +1079,14 @@ def teacher_quiz_results(request):
         return redirect('/')
 
     # Lấy tất cả quiz của teacher
-    quizzes = Quiz.objects.filter(course__teacher=request.user).select_related('course')
+    quizzes = Quiz.objects.filter(course__teacher=request.user).select_related('course').annotate(
+        question_count=Count('questions', distinct=True),
+        attempt_count=Count('userquizattempt', distinct=True)
+    ).order_by('-created_at')
     quiz_page_obj, quiz_query_string = paginate_request_queryset(
         request,
         quizzes,
-        per_page=4,
+        per_page=10,
         page_param='quiz_page'
     )
 
@@ -843,29 +1101,293 @@ def teacher_quiz_results(request):
 
     return render(request, 'teacher/quiz_results.html', {
         'quiz_data': quiz_data,
+        'quizzes': quiz_page_obj,
+        'quiz_count': quizzes.count(),
         'quiz_page_obj': quiz_page_obj,
         'quiz_query_string': quiz_query_string,
     })
 
 @teacher_required
+@teacher_required
 def teacher_attempt_detail(request, attempt_id):
     """Xem chi tiết câu trả lời của học viên"""
-    if not request.user.is_staff:
-        return redirect('/')
-
+    teacher = request.current_teacher
+    
     # Lấy attempt và kiểm tra quyền (phải là teacher của quiz này)
     attempt = get_object_or_404(UserQuizAttempt, id=attempt_id)
     
     # Kiểm tra xem người dùng có phải là teacher của khóa học chứa quiz này không
-    if attempt.quiz.course.teacher != request.user:
-        return redirect('/')
+    if attempt.quiz.course.teacher != teacher:
+        messages.error(request, '❌ Bạn không có quyền xem chi tiết này.')
+        return redirect('/teacher/')
 
     # Lấy tất cả câu trả lời của attempt
     answers = attempt.answers.all().select_related('question', 'selected_choice')
 
+    # Lấy slide của lesson gắn với quiz, fallback lesson đầu tiên của course nếu quiz chưa gắn lesson
+    lesson = attempt.quiz.lesson or attempt.quiz.course.lessons.order_by('order').first()
+    slide_embed_url = ""
+    slide_download_url = ""
+
+    if lesson and lesson.slide_url:
+        slide_embed_url, slide_download_url = build_slide_urls(lesson.slide_url)
+
     return render(request, 'teacher/attempt_detail.html', {
         'attempt': attempt,
-        'answers': answers
+        'answers': answers,
+        'lesson': lesson,
+        'slide_embed_url': slide_embed_url,
+        'slide_download_url': slide_download_url,
+    })
+
+
+@teacher_required
+def teacher_quiz_management(request):
+    """Quản lý bài ôn luyện - Xem danh sách, tạo, sửa, xóa"""
+    return redirect('teacher_quiz_results')
+
+
+@teacher_required
+def teacher_create_quiz_standalone(request):
+    """Tạo bài ôn luyện mới"""
+    if not request.user.is_staff:
+        return redirect('/')
+
+    # Lấy các khóa học của teacher
+    courses = Course.objects.filter(teacher=request.user).order_by('-id')
+    courses_data = {}
+
+    for course in courses:
+        courses_data[str(course.id)] = [
+            {
+                'id': lesson.id,
+                'title': lesson.title,
+            }
+            for lesson in Lesson.objects.filter(course=course).order_by('order')
+        ]
+
+    if request.method == "POST":
+        course_id = request.POST.get("course_id")
+        lesson_id = request.POST.get("lesson_id")
+        title = request.POST.get("title")
+        description = request.POST.get("description", "")
+        time_limit = request.POST.get("time_limit", 10)
+
+        try:
+            course = Course.objects.get(id=course_id, teacher=request.user)
+        except Course.DoesNotExist:
+            messages.error(request, "Khóa học không tồn tại hoặc bạn không có quyền truy cập")
+            return redirect('teacher_quiz_management')
+
+        lesson = None
+        if lesson_id:
+            try:
+                lesson = Lesson.objects.get(id=lesson_id, course=course)
+            except Lesson.DoesNotExist:
+                lesson = None
+
+        # Tạo quiz
+        quiz = Quiz.objects.create(
+            course=course,
+            lesson=lesson,
+            title=title,
+            description=description,
+            time_limit=max(int(time_limit), 0) * 60
+        )
+
+        # Xử lý câu hỏi
+        questions = request.POST.getlist("question[]")
+        option_a = request.POST.getlist("option_a[]")
+        option_b = request.POST.getlist("option_b[]")
+        option_c = request.POST.getlist("option_c[]")
+        option_d = request.POST.getlist("option_d[]")
+        correct = request.POST.getlist("correct_answer[]")
+        points = request.POST.getlist("points[]")
+
+        for i in range(len(questions)):
+            question_text = questions[i].strip() if i < len(questions) and questions[i] else ""
+            if question_text:  # Kiểm tra câu hỏi không trống
+                point_value = points[i] if i < len(points) else 1
+                question = Question.objects.create(
+                    quiz=quiz,
+                    text=question_text,
+                    order=i+1,
+                    points=int(point_value) if str(point_value).strip() else 1
+                )
+
+                Choice.objects.create(
+                    question=question,
+                    text=option_a[i] if i < len(option_a) else "",
+                    is_correct=(correct[i] == "A") if i < len(correct) else False
+                )
+                Choice.objects.create(
+                    question=question,
+                    text=option_b[i] if i < len(option_b) else "",
+                    is_correct=(correct[i] == "B") if i < len(correct) else False
+                )
+                Choice.objects.create(
+                    question=question,
+                    text=option_c[i] if i < len(option_c) else "",
+                    is_correct=(correct[i] == "C") if i < len(correct) else False
+                )
+                Choice.objects.create(
+                    question=question,
+                    text=option_d[i] if i < len(option_d) else "",
+                    is_correct=(correct[i] == "D") if i < len(correct) else False
+                )
+
+        messages.success(request, "Tạo bài ôn luyện thành công!")
+        return redirect('teacher_quiz_management')
+
+    return render(request, 'teacher/create_quiz_form.html', {
+        'courses': courses,
+        'courses_data': courses_data,
+        'action': 'create'
+    })
+
+
+@teacher_required
+def teacher_edit_quiz(request, quiz_id):
+    """Chỉnh sửa bài ôn luyện"""
+    if not request.user.is_staff:
+        return redirect('/')
+
+    quiz = get_object_or_404(Quiz, id=quiz_id, course__teacher=request.user)
+    courses = Course.objects.filter(teacher=request.user).order_by('-id')
+    courses_data = {}
+
+    for course in courses:
+        courses_data[str(course.id)] = [
+            {
+                'id': lesson.id,
+                'title': lesson.title,
+            }
+            for lesson in Lesson.objects.filter(course=course).order_by('order')
+        ]
+
+    questions = []
+    for question in quiz.questions.all().order_by('order'):
+        choices = list(question.choices.all().order_by('id'))
+        option_map = {'A': '', 'B': '', 'C': '', 'D': ''}
+        correct_answer = 'A'
+        for letter, choice in zip(['A', 'B', 'C', 'D'], choices):
+            option_map[letter] = choice.text
+            if choice.is_correct:
+                correct_answer = letter
+        questions.append({
+            'text': question.text,
+            'points': question.points,
+            'options': option_map,
+            'correct_answer': correct_answer,
+        })
+
+    if request.method == "POST":
+        quiz.title = request.POST.get("title")
+        quiz.description = request.POST.get("description", "")
+        quiz.time_limit = max(int(request.POST.get("time_limit", 10)), 0) * 60
+
+        course_id = request.POST.get("course_id")
+        lesson_id = request.POST.get("lesson_id")
+        if course_id:
+            course = get_object_or_404(Course, id=course_id, teacher=request.user)
+            quiz.course = course
+            quiz.lesson = Lesson.objects.filter(id=lesson_id, course=course).first() if lesson_id else None
+
+        quiz.save()
+
+        questions = request.POST.getlist("question[]")
+        option_a = request.POST.getlist("option_a[]")
+        option_b = request.POST.getlist("option_b[]")
+        option_c = request.POST.getlist("option_c[]")
+        option_d = request.POST.getlist("option_d[]")
+        correct = request.POST.getlist("correct_answer[]")
+        points = request.POST.getlist("points[]")
+
+        normalized_questions = []
+        for i in range(len(questions)):
+            question_text = questions[i].strip() if i < len(questions) and questions[i] else ""
+            if not question_text:
+                continue
+
+            normalized_questions.append({
+                'text': question_text,
+                'points': int(points[i]) if i < len(points) and str(points[i]).strip() else 1,
+                'option_a': option_a[i] if i < len(option_a) else "",
+                'option_b': option_b[i] if i < len(option_b) else "",
+                'option_c': option_c[i] if i < len(option_c) else "",
+                'option_d': option_d[i] if i < len(option_d) else "",
+                'correct': correct[i] if i < len(correct) else "A",
+            })
+
+        existing_questions = list(quiz.questions.all().order_by('order'))
+
+        for idx, question_data in enumerate(normalized_questions, start=1):
+            if idx <= len(existing_questions):
+                question = existing_questions[idx - 1]
+                question.text = question_data['text']
+                question.order = idx
+                question.points = question_data['points']
+                question.save()
+                question.choices.all().delete()
+            else:
+                question = Question.objects.create(
+                    quiz=quiz,
+                    text=question_data['text'],
+                    order=idx,
+                    points=question_data['points']
+                )
+
+            Choice.objects.create(
+                question=question,
+                text=question_data['option_a'],
+                is_correct=(question_data['correct'] == "A")
+            )
+            Choice.objects.create(
+                question=question,
+                text=question_data['option_b'],
+                is_correct=(question_data['correct'] == "B")
+            )
+            Choice.objects.create(
+                question=question,
+                text=question_data['option_c'],
+                is_correct=(question_data['correct'] == "C")
+            )
+            Choice.objects.create(
+                question=question,
+                text=question_data['option_d'],
+                is_correct=(question_data['correct'] == "D")
+            )
+
+        for question in existing_questions[len(normalized_questions):]:
+            question.delete()
+
+        messages.success(request, "Cập nhật bài ôn luyện thành công!")
+        return redirect('teacher_quiz_management')
+
+    return render(request, 'teacher/create_quiz_form.html', {
+        'quiz': quiz,
+        'courses': courses,
+        'courses_data': courses_data,
+        'questions': questions,
+        'action': 'edit'
+    })
+
+
+@teacher_required
+def teacher_delete_quiz(request, quiz_id):
+    """Xóa bài ôn luyện"""
+    if not request.user.is_staff:
+        return redirect('/')
+
+    quiz = get_object_or_404(Quiz, id=quiz_id, course__teacher=request.user)
+    
+    if request.method == "POST":
+        quiz.delete()
+        messages.success(request, "Xóa bài ôn luyện thành công!")
+        return redirect('teacher_quiz_management')
+
+    return render(request, 'teacher/delete_quiz_confirm.html', {
+        'quiz': quiz
     })
 
 @teacher_required
@@ -892,12 +1414,14 @@ def teacher_edit_course(request, id):
 
         # ===== UPDATE LESSON =====
         video_url = request.POST.get('video_url')
+        slide_url = request.POST.get('slide_url')
         content = request.POST.get('content')
 
         lesson = course.lessons.first()
 
         if lesson:
             lesson.video_url = video_url
+            lesson.slide_url = slide_url
             lesson.content = content
             lesson.save()
         else:
@@ -905,6 +1429,7 @@ def teacher_edit_course(request, id):
                 course=course,
                 title="Bài học 1",
                 video_url=video_url,
+                slide_url=slide_url,
                 content=content,
                 order=1,
                 is_free_preview=True
