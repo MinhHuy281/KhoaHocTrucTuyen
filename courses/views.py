@@ -1,29 +1,394 @@
 # courses/views.py
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
+from django.utils.html import escape
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Prefetch
+from django.db import connection
+from django.db.models import Q, Count, Prefetch, Avg
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, logout as django_logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db import OperationalError, ProgrammingError, DatabaseError
+from django.middleware.csrf import get_token
 import json
 import re
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlencode, parse_qs, urlparse
 from urllib.request import Request, urlopen
 
 # Import models
 from .models import (
     Course, Lesson, Enrollment, Quiz, Question, Choice, UserQuizAttempt, UserAnswer,
-    Level, Grade, Subject, Notification
+    Level, Grade, Subject, Notification, LessonComment, CourseComment
 )
 
 # Import accounts
 from accounts.models import UserProfile
 from accounts.auth import SeparateSessionAuth
 from accounts.decorators import teacher_required, student_required
+
+
+COMMENT_META_TAG = "[[COMMENT_META]]"
+
+
+def append_reply_history(existing_reply, new_reply, replied_at):
+    existing_text = (existing_reply or '').strip()
+    new_text = (new_reply or '').strip()
+
+    timestamp = replied_at.strftime('%d/%m/%Y %H:%M') if replied_at else timezone.now().strftime('%d/%m/%Y %H:%M')
+    entry = f"[{timestamp}] {new_text}"
+
+    if not existing_text:
+        return entry
+
+    return f"{existing_text}\n\n{entry}"
+
+
+def build_comment_notification_message(base_message, meta):
+    payload = urlencode(meta)
+    return f"{base_message} {COMMENT_META_TAG}{payload}"
+
+
+def parse_comment_notification_message(raw_message):
+    message = raw_message or ""
+    if COMMENT_META_TAG not in message:
+        return message, None
+
+    content, payload = message.split(COMMENT_META_TAG, 1)
+    content = content.strip()
+    payload = payload.strip()
+
+    if not payload:
+        return content, None
+
+    parsed = parse_qs(payload, keep_blank_values=True)
+    meta = {key: values[0] for key, values in parsed.items() if values}
+    return content, meta
+
+
+def infer_comment_meta_from_legacy_message(message, teacher):
+    """Infer notification metadata from old plain-text comment messages."""
+    text = (message or '').strip()
+
+    lesson_reply_match = re.search(
+        r"Học viên\s+([^\s]+)\s+đã phản hồi lại ở bài\s+'([^']+)'\s+trong khóa\s+'([^']+)'",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if lesson_reply_match:
+        username, lesson_title, course_title = lesson_reply_match.groups()
+        student = User.objects.filter(username=username).first()
+        if not student:
+            return None
+
+        lesson_comment = (
+            LessonComment.objects.filter(
+                user=student,
+                lesson__title=lesson_title,
+                lesson__course__title=course_title,
+                lesson__course__teacher=teacher,
+            )
+            .select_related('lesson')
+            .order_by('-user_replied_at', '-created_at')
+            .first()
+        )
+        if not lesson_comment:
+            return None
+
+        return {
+            'type': 'lesson',
+            'comment_id': str(lesson_comment.id),
+            'student_id': str(student.id),
+            'lesson_id': str(lesson_comment.lesson_id),
+            'course_id': str(lesson_comment.lesson.course_id),
+        }
+
+    course_reply_match = re.search(
+        r"Học viên\s+([^\s]+)\s+đã phản hồi lại\s+trong khóa\s+'([^']+)'",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if course_reply_match:
+        username, course_title = course_reply_match.groups()
+        student = User.objects.filter(username=username).first()
+        if not student:
+            return None
+
+        course_comment = (
+            CourseComment.objects.filter(
+                user=student,
+                course__title=course_title,
+                course__teacher=teacher,
+            )
+            .select_related('course')
+            .order_by('-user_replied_at', '-created_at')
+            .first()
+        )
+        if not course_comment:
+            return None
+
+        return {
+            'type': 'course',
+            'comment_id': str(course_comment.id),
+            'student_id': str(student.id),
+            'course_id': str(course_comment.course_id),
+        }
+
+    lesson_match = re.search(
+        r"Học viên\s+([^\s]+)\s+đã bình luận ở bài\s+'([^']+)'\s+trong khóa\s+'([^']+)'",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if lesson_match:
+        username, lesson_title, course_title = lesson_match.groups()
+        student = User.objects.filter(username=username).first()
+        if not student:
+            return None
+
+        lesson_comment = (
+            LessonComment.objects.filter(
+                user=student,
+                lesson__title=lesson_title,
+                lesson__course__title=course_title,
+                lesson__course__teacher=teacher,
+            )
+            .select_related('lesson')
+            .order_by('-created_at')
+            .first()
+        )
+        if not lesson_comment:
+            return None
+
+        return {
+            'type': 'lesson',
+            'comment_id': str(lesson_comment.id),
+            'student_id': str(student.id),
+            'lesson_id': str(lesson_comment.lesson_id),
+            'course_id': str(lesson_comment.lesson.course_id),
+        }
+
+    course_match = re.search(
+        r"Học viên\s+([^\s]+)\s+đã bình luận\s+trong khóa\s+'([^']+)'",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if course_match:
+        username, course_title = course_match.groups()
+        student = User.objects.filter(username=username).first()
+        if not student:
+            return None
+
+        course_comment = (
+            CourseComment.objects.filter(
+                user=student,
+                course__title=course_title,
+                course__teacher=teacher,
+            )
+            .select_related('course')
+            .order_by('-created_at')
+            .first()
+        )
+        if not course_comment:
+            return None
+
+        return {
+            'type': 'course',
+            'comment_id': str(course_comment.id),
+            'student_id': str(student.id),
+            'course_id': str(course_comment.course_id),
+        }
+
+    return None
+
+
+def infer_student_comment_meta_from_legacy_message(message, student):
+    """Infer student-side reply metadata from old plain-text teacher notifications."""
+    text = (message or '').strip()
+
+    match = re.search(
+        r"Giảng viên\s+([^\s]+)\s+đã phản hồi bình luận của bạn ở\s+'([^']+)'",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+
+    teacher_username, destination = match.groups()
+
+    lesson_comment = (
+        LessonComment.objects.filter(
+            user=student,
+            lesson__title=destination,
+            lesson__course__teacher__username=teacher_username,
+            teacher_reply__isnull=False,
+        )
+        .exclude(teacher_reply='')
+        .select_related('lesson')
+        .order_by('-teacher_replied_at', '-created_at')
+        .first()
+    )
+    if lesson_comment:
+        return {
+            'type': 'lesson',
+            'comment_id': str(lesson_comment.id),
+            'student_id': str(student.id),
+            'teacher_id': str(lesson_comment.lesson.course.teacher_id),
+            'course_id': str(lesson_comment.lesson.course_id),
+            'lesson_id': str(lesson_comment.lesson_id),
+        }
+
+    course_comment = (
+        CourseComment.objects.filter(
+            user=student,
+            course__title=destination,
+            course__teacher__username=teacher_username,
+            teacher_reply__isnull=False,
+        )
+        .exclude(teacher_reply='')
+        .select_related('course')
+        .order_by('-teacher_replied_at', '-created_at')
+        .first()
+    )
+    if course_comment:
+        return {
+            'type': 'course',
+            'comment_id': str(course_comment.id),
+            'student_id': str(student.id),
+            'teacher_id': str(course_comment.course.teacher_id),
+            'course_id': str(course_comment.course_id),
+        }
+
+    return None
+
+
+def ensure_comment_tables():
+    """Create comment tables and missing reply columns if migrations cannot be applied."""
+    try:
+        existing_tables = set(connection.introspection.table_names())
+
+        models_to_create = []
+        if CourseComment._meta.db_table not in existing_tables:
+            models_to_create.append(CourseComment)
+        if LessonComment._meta.db_table not in existing_tables:
+            models_to_create.append(LessonComment)
+
+        with connection.schema_editor() as schema_editor:
+            for model in models_to_create:
+                schema_editor.create_model(model)
+
+            # Some environments block migration file writes; add missing columns at runtime.
+            refreshed_tables = set(connection.introspection.table_names())
+            column_updates = [
+                (CourseComment, 'teacher_reply'),
+                (CourseComment, 'teacher_replied_at'),
+                (CourseComment, 'user_reply'),
+                (CourseComment, 'user_replied_at'),
+                (LessonComment, 'teacher_reply'),
+                (LessonComment, 'teacher_replied_at'),
+                (LessonComment, 'user_reply'),
+                (LessonComment, 'user_replied_at'),
+            ]
+
+            for model, field_name in column_updates:
+                table_name = model._meta.db_table
+                if table_name not in refreshed_tables:
+                    continue
+
+                model_fields = connection.introspection.get_table_description(connection.cursor(), table_name)
+                existing_columns = {field.name for field in model_fields}
+                if field_name in existing_columns:
+                    continue
+
+                schema_editor.add_field(model, model._meta.get_field(field_name))
+
+        return True
+    except DatabaseError:
+        return False
+
+
+def notify_teacher_for_comment(*, course, actor, rating, content, comment_kind, comment_id, lesson=None):
+    """Push a notification to the course teacher when a student comments/rates."""
+    teacher = course.teacher
+    if not teacher or teacher == actor:
+        return
+
+    snippet = (content or "").strip().replace("\n", " ")[:80]
+    lesson_part = f" ở bài '{lesson.title}'" if lesson else ""
+
+    human_message = (
+        f"Học viên {actor.username} đã bình luận{lesson_part} trong khóa '{course.title}' "
+        f"({rating} sao). Nội dung: \"{snippet}\""
+    )
+
+    meta = {
+        'type': comment_kind,
+        'course_id': str(course.id),
+        'comment_id': str(comment_id),
+        'student_id': str(actor.id),
+    }
+    if lesson:
+        meta['lesson_id'] = str(lesson.id)
+
+    Notification.objects.create(
+        user=teacher,
+        message=build_comment_notification_message(human_message, meta)
+    )
+
+
+def notify_teacher_for_user_reply(*, course, actor, reply_text, comment_kind, comment_id, lesson=None):
+    teacher = course.teacher
+    if not teacher or teacher == actor:
+        return
+
+    snippet = (reply_text or "").strip().replace("\n", " ")[:120]
+    lesson_part = f" ở bài '{lesson.title}'" if lesson else ""
+    human_message = f"Học viên {actor.username} đã phản hồi lại{lesson_part} trong khóa '{course.title}': \"{snippet}\""
+
+    meta = {
+        'type': comment_kind,
+        'course_id': str(course.id),
+        'comment_id': str(comment_id),
+        'student_id': str(actor.id),
+    }
+    if lesson:
+        meta['lesson_id'] = str(lesson.id)
+
+    Notification.objects.create(
+        user=teacher,
+        message=build_comment_notification_message(human_message, meta)
+    )
+
+
+def notify_comment_owner_for_reply(*, parent_comment, actor, reply_text, comment_kind, lesson=None, course=None):
+    recipient = parent_comment.user
+    if not recipient or recipient == actor:
+        return
+
+    snippet = (reply_text or "").strip().replace("\n", " ")[:120]
+    if lesson:
+        location_text = f"ở bài '{lesson.title}' trong khóa '{lesson.course.title}'"
+    elif course:
+        location_text = f"trong khóa '{course.title}'"
+    else:
+        location_text = ""
+
+    human_message = f"Học viên {actor.username} đã phản hồi bình luận của bạn {location_text}: \"{snippet}\""
+
+    meta = {
+        'type': comment_kind,
+        'course_id': str(course.id if course else parent_comment.course_id),
+        'comment_id': str(parent_comment.id),
+        'student_id': str(actor.id),
+    }
+    if lesson:
+        meta['lesson_id'] = str(lesson.id)
+
+    Notification.objects.create(
+        user=recipient,
+        message=build_comment_notification_message(human_message, meta)
+    )
 
 
 def is_strong_password(password):
@@ -127,7 +492,24 @@ def build_slide_urls(raw_url):
 
 # Trang chủ
 def index(request):
-    courses = Course.objects.all().order_by('-id')
+    courses = (
+        Course.objects
+        .annotate(
+            avg_rating=Avg(
+                'comments__rating',
+                filter=Q(comments__parent_comment__isnull=True)
+            ),
+            rating_count=Count(
+                'comments__id',
+                filter=Q(
+                    comments__parent_comment__isnull=True,
+                    comments__rating__isnull=False,
+                ),
+                distinct=True,
+            ),
+        )
+        .order_by('-id')
+    )
     page_obj, query_string = paginate_request_queryset(request, courses, per_page=6)
     return render(request, "index.html", {
         "courses": page_obj,
@@ -138,7 +520,24 @@ def index(request):
 
 # Danh sách khóa học
 def courses(request):
-    courses = Course.objects.all().order_by('-id')
+    courses = (
+        Course.objects
+        .annotate(
+            avg_rating=Avg(
+                'comments__rating',
+                filter=Q(comments__parent_comment__isnull=True)
+            ),
+            rating_count=Count(
+                'comments__id',
+                filter=Q(
+                    comments__parent_comment__isnull=True,
+                    comments__rating__isnull=False,
+                ),
+                distinct=True,
+            ),
+        )
+        .order_by('-id')
+    )
 
     level = request.GET.get("level")
     grade = request.GET.get("grade")
@@ -229,6 +628,8 @@ def teachers_statistics(request):
 
 # Chi tiết khóa học
 def course_detail(request, course_id):
+    comments_available = ensure_comment_tables()
+
     course = get_object_or_404(Course, id=course_id)
     lessons = course.lessons.all().order_by('order')
     first_lesson = lessons.first()
@@ -252,14 +653,8 @@ def course_detail(request, course_id):
     pending = False
 
     if request.user.is_authenticated:
-        # ✅ FIX: chỉ tự mở khóa khi giá thực tế bằng 0
-        if course.price == 0:
-            enrollment, _ = course.enrollments.get_or_create(
-                user=request.user,
-                defaults={'status': 'approved'}
-            )
-        else:
-            enrollment = course.enrollments.filter(user=request.user).first()
+        # ✅ Chỉ kiểm tra enrollment nếu user đã chủ động đăng ký
+        enrollment = course.enrollments.filter(user=request.user).first()
 
         if enrollment:
             enrolled = True
@@ -268,6 +663,175 @@ def course_detail(request, course_id):
                 approved = True
             elif enrollment.status == 'paid':
                 pending = True
+
+    can_comment = bool(enrollment and enrollment.status == 'approved')
+
+    comments_enabled = comments_available
+    comments = []
+    average_rating = 0
+    total_ratings = 0
+    rating_rows = [{'star': star, 'count': 0, 'percent': 0} for star in range(5, 0, -1)]
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            messages.warning(request, 'Vui lòng đăng nhập để bình luận khóa học.')
+            return redirect('login')
+
+        if not can_comment:
+            messages.error(request, 'Bạn cần đăng ký và thanh toán thành công trước khi được bình luận và đánh giá khóa học.')
+            return redirect('course_detail', course_id=course.id)
+
+        action = (request.POST.get('action') or 'comment').strip()
+
+        if action == 'reply_comment':
+            reply_text = (request.POST.get('reply_content') or '').strip()
+            parent_comment_id = request.POST.get('comment_id')
+
+            parent_comment = CourseComment.objects.filter(
+                id=parent_comment_id,
+                course=course,
+                parent_comment__isnull=True,
+            ).first()
+
+            if not parent_comment:
+                messages.error(request, 'Không tìm thấy bình luận để phản hồi.')
+                return redirect('course_detail', course_id=course.id)
+
+            if not reply_text:
+                messages.error(request, 'Nội dung phản hồi không được để trống.')
+                return redirect('course_detail', course_id=course.id)
+
+            reply_model = CourseComment
+            fallback_rating = parent_comment.rating if getattr(parent_comment, 'rating', None) else 5
+            reply_model.objects.create(
+                course=course,
+                user=request.user,
+                content=reply_text,
+                rating=fallback_rating,
+                parent_comment=parent_comment,
+            )
+
+            notify_comment_owner_for_reply(
+                parent_comment=parent_comment,
+                actor=request.user,
+                reply_text=reply_text,
+                comment_kind='course',
+                course=course,
+            )
+
+            messages.success(request, 'Đã gửi phản hồi cho bình luận này.')
+            return redirect('course_detail', course_id=course.id)
+
+        if action == 'reply_teacher':
+            reply_text = (request.POST.get('reply_content') or '').strip()
+            comment_id = request.POST.get('comment_id')
+
+            comment_obj = CourseComment.objects.filter(
+                id=comment_id,
+                user=request.user,
+                course=course,
+            ).first()
+
+            if not comment_obj:
+                messages.error(request, 'Không tìm thấy bình luận để phản hồi.')
+                return redirect('course_detail', course_id=course.id)
+
+            if not comment_obj.teacher_reply:
+                messages.warning(request, 'Bình luận này chưa có phản hồi từ giảng viên.')
+                return redirect('course_detail', course_id=course.id)
+
+            if not reply_text:
+                messages.error(request, 'Nội dung phản hồi không được để trống.')
+                return redirect('course_detail', course_id=course.id)
+
+                replied_at = timezone.now()
+                comment_obj.user_reply = append_reply_history(
+                    comment_obj.user_reply,
+                    reply_text,
+                    replied_at,
+                )
+                comment_obj.user_replied_at = replied_at
+            comment_obj.save(update_fields=['user_reply', 'user_replied_at'])
+
+            notify_teacher_for_user_reply(
+                course=course,
+                actor=request.user,
+                reply_text=reply_text,
+                comment_kind='course',
+                comment_id=comment_obj.id,
+            )
+            messages.success(request, 'Đã gửi phản hồi lại cho giảng viên.')
+            return redirect('course_detail', course_id=course.id)
+
+        content = (request.POST.get('content') or '').strip()
+        rating_raw = request.POST.get('rating')
+
+        try:
+            rating = int(rating_raw)
+        except (TypeError, ValueError):
+            rating = 0
+
+        if not content:
+            messages.error(request, 'Nội dung bình luận không được để trống.')
+        elif not 1 <= rating <= 5:
+            messages.error(request, 'Vui lòng chọn số sao từ 1 đến 5.')
+        else:
+            try:
+                course_comment = CourseComment.objects.create(
+                    course=course,
+                    user=request.user,
+                    content=content,
+                    rating=rating,
+                )
+                notify_teacher_for_comment(
+                    course=course,
+                    actor=request.user,
+                    rating=rating,
+                    content=content,
+                    comment_kind='course',
+                    comment_id=course_comment.id,
+                )
+                messages.success(request, 'Đã gửi bình luận khóa học của bạn.')
+                return redirect('course_detail', course_id=course.id)
+            except (ProgrammingError, OperationalError):
+                comments_enabled = False
+                messages.warning(request, 'Chức năng bình luận đang tạm thời chưa sẵn sàng. Vui lòng chạy migrate.')
+
+    try:
+        comments = (
+            course.comments
+            .filter(parent_comment__isnull=True)
+            .select_related('user')
+            .prefetch_related(
+                Prefetch(
+                    'replies',
+                    queryset=CourseComment.objects.select_related('user').order_by('created_at')
+                )
+            )
+            .order_by('-created_at')
+        )
+        rating_summary = comments.aggregate(avg_rating=Avg('rating'), total_ratings=Count('id'))
+
+        average_rating = rating_summary['avg_rating'] or 0
+        total_ratings = rating_summary['total_ratings'] or 0
+
+        rating_counts_raw = comments.values('rating').annotate(total=Count('id'))
+        rating_counts = {star: 0 for star in range(1, 6)}
+        for item in rating_counts_raw:
+            if item['rating'] in rating_counts:
+                rating_counts[item['rating']] = item['total']
+
+        rating_rows = []
+        for star in range(5, 0, -1):
+            count = rating_counts[star]
+            percent = (count / total_ratings * 100) if total_ratings else 0
+            rating_rows.append({
+                'star': star,
+                'count': count,
+                'percent': round(percent, 2),
+            })
+    except (ProgrammingError, OperationalError):
+        comments_enabled = False
 
     return render(request, "course_detail.html", {
         "course": course,
@@ -281,11 +845,20 @@ def course_detail(request, course_id):
         "enrollment": enrollment,
         "enrolled": enrolled,
         "approved": approved,
-        "pending": pending
+        "pending": pending,
+        "can_comment": can_comment,
+        "comments": comments,
+        "comments_enabled": comments_enabled,
+        "average_rating": round(average_rating, 1),
+        "total_ratings": total_ratings,
+        "rating_rows": rating_rows,
+        "rating_scale": range(5, 0, -1),
     })
 
 # Xem bài học (lesson)
 def lesson_view(request, lesson_id):
+    comments_available = ensure_comment_tables()
+
     lesson = get_object_or_404(Lesson, id=lesson_id)
     course = lesson.course
 
@@ -301,6 +874,135 @@ def lesson_view(request, lesson_id):
     if not (course.price == 0 or enrollment):
         messages.warning(request, 'Vui lòng đăng ký khóa học để xem bài này.')
         return redirect('course_detail', course_id=course.id)
+
+    if request.method == 'POST':
+        if not comments_available:
+            messages.warning(request, 'Chức năng bình luận đang tạm thời chưa sẵn sàng. Vui lòng kiểm tra quyền cơ sở dữ liệu.')
+            return redirect('lesson_view', lesson_id=lesson.id)
+
+        if not request.user.is_authenticated:
+            messages.warning(request, 'Vui lòng đăng nhập để bình luận bài học.')
+            return redirect('login')
+
+        # ✅ Bắt buộc phải enrolled và đã duyệt/thanh toán xong mới được bình luận
+        if not enrollment:
+            messages.error(request, 'Bạn cần đăng ký và thanh toán thành công trước khi được bình luận và đánh giá bài học.')
+            return redirect('course_detail', course_id=course.id)
+
+        action = (request.POST.get('action') or 'comment').strip()
+
+        if action == 'reply_comment':
+            reply_text = (request.POST.get('reply_content') or '').strip()
+            parent_comment_id = request.POST.get('comment_id')
+
+            parent_comment = LessonComment.objects.filter(
+                id=parent_comment_id,
+                lesson=lesson,
+                parent_comment__isnull=True,
+            ).first()
+
+            if not parent_comment:
+                messages.error(request, 'Không tìm thấy bình luận để phản hồi.')
+                return redirect('lesson_view', lesson_id=lesson.id)
+
+            if not reply_text:
+                messages.error(request, 'Nội dung phản hồi không được để trống.')
+                return redirect('lesson_view', lesson_id=lesson.id)
+
+            reply_model = LessonComment
+            fallback_rating = parent_comment.rating if getattr(parent_comment, 'rating', None) else 5
+            reply_model.objects.create(
+                lesson=lesson,
+                user=request.user,
+                content=reply_text,
+                rating=fallback_rating,
+                parent_comment=parent_comment,
+            )
+
+            notify_comment_owner_for_reply(
+                parent_comment=parent_comment,
+                actor=request.user,
+                reply_text=reply_text,
+                comment_kind='lesson',
+                lesson=lesson,
+                course=course,
+            )
+
+            messages.success(request, 'Đã gửi phản hồi cho bình luận này.')
+            return redirect('lesson_view', lesson_id=lesson.id)
+
+        if action == 'reply_teacher':
+            reply_text = (request.POST.get('reply_content') or '').strip()
+            comment_id = request.POST.get('comment_id')
+
+            comment_obj = LessonComment.objects.filter(
+                id=comment_id,
+                user=request.user,
+                lesson=lesson,
+            ).first()
+
+            if not comment_obj:
+                messages.error(request, 'Không tìm thấy bình luận để phản hồi.')
+                return redirect('lesson_view', lesson_id=lesson.id)
+
+            if not comment_obj.teacher_reply:
+                messages.warning(request, 'Bình luận này chưa có phản hồi từ giảng viên.')
+                return redirect('lesson_view', lesson_id=lesson.id)
+
+            if not reply_text:
+                messages.error(request, 'Nội dung phản hồi không được để trống.')
+                return redirect('lesson_view', lesson_id=lesson.id)
+
+            replied_at = timezone.now()
+            comment_obj.user_reply = append_reply_history(
+                comment_obj.user_reply,
+                reply_text,
+                replied_at,
+            )
+            comment_obj.user_replied_at = replied_at
+            comment_obj.save(update_fields=['user_reply', 'user_replied_at'])
+
+            notify_teacher_for_user_reply(
+                course=course,
+                actor=request.user,
+                reply_text=reply_text,
+                comment_kind='lesson',
+                comment_id=comment_obj.id,
+                lesson=lesson,
+            )
+            messages.success(request, 'Đã gửi phản hồi lại cho giảng viên.')
+            return redirect('lesson_view', lesson_id=lesson.id)
+
+        content = (request.POST.get('content') or '').strip()
+        rating_raw = request.POST.get('rating')
+
+        try:
+            rating = int(rating_raw)
+        except (TypeError, ValueError):
+            rating = 0
+
+        if not content:
+            messages.error(request, 'Nội dung bình luận không được để trống.')
+        elif not 1 <= rating <= 5:
+            messages.error(request, 'Vui lòng chọn số sao từ 1 đến 5.')
+        else:
+            lesson_comment = LessonComment.objects.create(
+                lesson=lesson,
+                user=request.user,
+                content=content,
+                rating=rating,
+            )
+            notify_teacher_for_comment(
+                course=course,
+                actor=request.user,
+                rating=rating,
+                content=content,
+                comment_kind='lesson',
+                comment_id=lesson_comment.id,
+                lesson=lesson,
+            )
+            messages.success(request, 'Đã gửi bình luận của bạn.')
+            return redirect('lesson_view', lesson_id=lesson.id)
 
     # ===== XỬ LÝ VIDEO YOUTUBE =====
     video_id = ""
@@ -322,17 +1024,72 @@ def lesson_view(request, lesson_id):
     if lesson.slide_url:
         slide_embed_url, slide_download_url = build_slide_urls(lesson.slide_url)
 
+    comments = []
+    average_rating = 0
+    total_ratings = 0
+    rating_rows = [{'star': star, 'count': 0, 'percent': 0} for star in range(5, 0, -1)]
+
+    if comments_available:
+        comments = (
+            lesson.comments
+            .filter(parent_comment__isnull=True)
+            .select_related('user')
+            .prefetch_related(
+                Prefetch(
+                    'replies',
+                    queryset=LessonComment.objects.select_related('user').order_by('created_at')
+                )
+            )
+            .order_by('-created_at')
+        )
+        rating_summary = comments.aggregate(avg_rating=Avg('rating'), total_ratings=Count('id'))
+
+        average_rating = rating_summary['avg_rating'] or 0
+        total_ratings = rating_summary['total_ratings'] or 0
+
+        rating_counts_raw = comments.values('rating').annotate(total=Count('id'))
+        rating_counts = {star: 0 for star in range(1, 6)}
+        for item in rating_counts_raw:
+            if item['rating'] in rating_counts:
+                rating_counts[item['rating']] = item['total']
+
+        rating_rows = []
+        for star in range(5, 0, -1):
+            count = rating_counts[star]
+            percent = (count / total_ratings * 100) if total_ratings else 0
+            rating_rows.append({
+                'star': star,
+                'count': count,
+                'percent': round(percent, 2),
+            })
+
+    # Kiểm tra xem user có thể bình luận hay không: bắt buộc phải enrolled (đã approved)
+    can_comment = bool(enrollment)
+
     return render(request, "lesson.html", {
         "lesson": lesson,
+        "course": course,
+        "enrollment": enrollment,
+        "can_comment": can_comment,
         "video_id": video_id,
         "slide_embed_url": slide_embed_url,
         "slide_download_url": slide_download_url,
+        "comments": comments,
+        "comments_enabled": comments_available,
+        "average_rating": round(average_rating, 1),
+        "total_ratings": total_ratings,
+        "rating_rows": rating_rows,
+        "rating_scale": range(5, 0, -1),
     })
 
 # ĐĂNG NHẬP HỌC VIÊN
 def login_view(request):
     """Đăng nhập USER/STUDENT tại /login/."""
     if request.method == 'POST':
+        # Luôn xóa session cũ trước khi thử đăng nhập tài khoản khác.
+        SeparateSessionAuth.logout_user(request)
+        SeparateSessionAuth.logout_teacher(request)
+
         username = request.POST.get('username')
         password = request.POST.get('password')
 
@@ -373,6 +1130,10 @@ def login_view(request):
 def teacher_login_view(request):
     """Đăng nhập TEACHER tại /teacher/login/."""
     if request.method == 'POST':
+        # Luôn xóa session cũ trước khi thử đăng nhập tài khoản khác.
+        SeparateSessionAuth.logout_user(request)
+        SeparateSessionAuth.logout_teacher(request)
+
         username = request.POST.get('username')
         password = request.POST.get('password')
 
@@ -696,7 +1457,10 @@ def teacher_dashboard(request):
     if not request.user.is_staff:
         return redirect('/')
 
-    courses = Course.objects.filter(teacher=request.user)
+    courses = Course.objects.filter(teacher=request.user).annotate(
+        avg_rating=Avg('comments__rating', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False)),
+        rating_count=Count('comments', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False), distinct=True),
+    )
     course_page_obj, course_query_string = paginate_request_queryset(
         request,
         courses,
@@ -704,22 +1468,10 @@ def teacher_dashboard(request):
         page_param='course_page'
     )
 
-    # 🔔 ALL NOTIFICATIONS
-    notifications = Notification.objects.filter(
-        user=request.user
-    ).order_by('-created_at')
-
-    # 🔴 UNREAD ONLY
-    unread_notifications = notifications.filter(is_read=False)
-    unread_count = unread_notifications.count()
-
     return render(request, 'teacher/index_teacher.html', {
         'courses': course_page_obj,
         'course_page_obj': course_page_obj,
         'course_query_string': course_query_string,
-        'notifications': notifications[:5],
-        'unread_count': unread_count,
-        'unread_notifications': unread_notifications
     })
 
 
@@ -841,7 +1593,9 @@ def teacher_profile(request):
 
     teaching_courses = Course.objects.filter(teacher=teacher).annotate(
         approved_students=Count('enrollments', filter=Q(enrollments__status='approved')),
-        quizzes_count=Count('quizzes', distinct=True)
+        quizzes_count=Count('quizzes', distinct=True),
+        avg_rating=Avg('comments__rating', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False)),
+        rating_count=Count('comments', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False), distinct=True),
     ).select_related('subject', 'grade', 'level').order_by('-id')
 
     teaching_attempts = UserQuizAttempt.objects.filter(
@@ -873,7 +1627,10 @@ def teacher_courses(request):
     if not request.user.is_staff:
         return redirect('/')
 
-    courses = Course.objects.filter(teacher=request.user)
+    courses = Course.objects.filter(teacher=request.user).annotate(
+        avg_rating=Avg('comments__rating', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False)),
+        rating_count=Count('comments', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False), distinct=True),
+    )
     page_obj, query_string = paginate_request_queryset(request, courses, per_page=8)
 
     return render(request, 'teacher/teacher_courses.html', {
@@ -1065,12 +1822,48 @@ def teacher_course_detail(request, id):
     if first_lesson and first_lesson.slide_url:
         slide_embed_url, slide_download_url = build_slide_urls(first_lesson.slide_url)
 
+    # Calculate rating statistics
+    comments = course.comments.filter(parent_comment__isnull=True).select_related('user').prefetch_related(
+        Prefetch(
+            'replies',
+            queryset=CourseComment.objects.select_related('user').order_by('created_at')
+        )
+    )
+    rating_summary = comments.aggregate(avg_rating=Avg('rating'), total_ratings=Count('id'))
+    
+    average_rating = rating_summary['avg_rating'] or 0
+    total_ratings = rating_summary['total_ratings'] or 0
+    
+    rating_counts_raw = comments.values('rating').annotate(total=Count('id'))
+    rating_counts = {star: 0 for star in range(1, 6)}
+    for item in rating_counts_raw:
+        if item['rating'] in rating_counts:
+            rating_counts[item['rating']] = item['total']
+    
+    rating_rows = []
+    for star in range(5, 0, -1):
+        count = rating_counts[star]
+        percent = (count / total_ratings * 100) if total_ratings else 0
+        rating_rows.append({
+            'star': star,
+            'count': count,
+            'percent': round(percent, 2),
+        })
+    
+    # Recalculate course rating stats for inline display
+    course.avg_rating = round(average_rating, 1)
+    course.rating_count = total_ratings
+
     return render(request, 'teacher/course_detail.html', {
         'course': course,
         'lessons': lessons,
         'first_lesson': first_lesson,
         'slide_embed_url': slide_embed_url,
         'slide_download_url': slide_download_url,
+        'comments': comments,
+        'average_rating': round(average_rating, 1),
+        'total_ratings': total_ratings,
+        'rating_rows': rating_rows,
     })
 
 @teacher_required
@@ -1570,8 +2363,16 @@ def enroll_course(request, course_id):
                 'error': 'Vui lòng nhập đầy đủ thông tin!'
             })
 
-        # 👉 redirect qua payment sau khi nhập xong
-        return redirect('payment', enrollment_id=enrollment.id)
+        # 👉 redirect qua payment sau khi nhập xong (khóa học có phí)
+        if course.price and course.price > 0:
+            return redirect('payment', enrollment_id=enrollment.id)
+
+        # ✅ Khóa học miễn phí: duyệt sau khi đã xác nhận đăng ký
+        if course.price == 0 and enrollment.status != 'approved':
+            enrollment.approve()
+
+        messages.success(request, 'Đăng ký khóa học thành công.')
+        return redirect('course_detail', course_id=course.id)
 
     return render(request, 'enroll_confirm.html', {
         'enrollment': enrollment
@@ -1588,4 +2389,324 @@ def mark_notifications_read(request):
         ).update(is_read=True)
 
         return JsonResponse({'status': 'ok'})
+
+
+@student_required
+def mark_user_notifications_read(request):
+    if request.method == "POST":
+        Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).update(is_read=True)
+
+        return JsonResponse({'status': 'ok'})
+
+
+@student_required
+def user_reply_comment(request, notification_id):
+    current_user = getattr(request, 'current_user', None) or request.user
+    notification = Notification.objects.filter(id=notification_id, user=current_user).first()
+    if not notification:
+        messages.info(request, 'Thông báo này không còn tồn tại hoặc không thuộc tài khoản của bạn.')
+        return redirect('user_profile')
+    clean_message, meta = parse_comment_notification_message(notification.message)
+
+    if not meta:
+        meta = infer_student_comment_meta_from_legacy_message(clean_message, current_user)
+        if not meta:
+            notification.is_read = True
+            notification.save(update_fields=['is_read'])
+            messages.info(request, 'Thông báo này không có nội dung trả lời trực tiếp.')
+            return redirect('user_profile')
+
+    comment_type = meta.get('type')
+    comment_id = meta.get('comment_id')
+    teacher_id = meta.get('teacher_id')
+
+    if not comment_type or not comment_id:
+        messages.warning(request, 'Dữ liệu thông báo không hợp lệ.')
+        return redirect('user_profile')
+
+    comment_obj = None
+    target_url = '/'
+
+    try:
+        if comment_type == 'lesson':
+            comment_obj = LessonComment.objects.select_related('lesson', 'lesson__course').get(
+                id=comment_id,
+                user=current_user,
+            )
+            target_url = f"/lesson/{comment_obj.lesson_id}/"
+            if not teacher_id:
+                teacher_id = comment_obj.lesson.course.teacher_id
+        else:
+            comment_obj = CourseComment.objects.select_related('course').get(
+                id=comment_id,
+                user=current_user,
+            )
+            target_url = f"/course/{comment_obj.course_id}/"
+            if not teacher_id:
+                teacher_id = comment_obj.course.teacher_id
+    except (LessonComment.DoesNotExist, CourseComment.DoesNotExist):
+        comment_obj = None
+
+    if not comment_obj:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+        messages.warning(request, 'Không tìm thấy bình luận gốc để phản hồi.')
+        return redirect('user_profile')
+
+    if request.method == 'POST':
+        reply_content = (request.POST.get('reply_content') or '').strip()
+
+        if not reply_content:
+            messages.error(request, 'Nội dung phản hồi không được để trống.')
+        else:
+            model_field_names = {field.name for field in comment_obj._meta.concrete_fields}
+            if 'user_reply' in model_field_names and 'user_replied_at' in model_field_names:
+                replied_at = timezone.now()
+                comment_obj.user_reply = append_reply_history(
+                    comment_obj.user_reply,
+                    reply_content,
+                    replied_at,
+                )
+                comment_obj.user_replied_at = replied_at
+                comment_obj.save(update_fields=['user_reply', 'user_replied_at'])
+            else:
+                reply_model = LessonComment if comment_type == 'lesson' else CourseComment
+                fallback_rating = comment_obj.rating if getattr(comment_obj, 'rating', None) else 5
+                create_kwargs = {
+                    'user': current_user,
+                    'content': reply_content,
+                    'rating': fallback_rating,
+                    'parent_comment': comment_obj,
+                }
+                if comment_type == 'lesson':
+                    create_kwargs['lesson'] = comment_obj.lesson
+                else:
+                    create_kwargs['course'] = comment_obj.course
+
+                reply_model.objects.create(**create_kwargs)
+
+            teacher = User.objects.filter(id=teacher_id).first() if teacher_id else None
+            if teacher:
+                if comment_type == 'lesson':
+                    course = comment_obj.lesson.course
+                    lesson = comment_obj.lesson
+                else:
+                    course = comment_obj.course
+                    lesson = None
+
+                notify_teacher_for_user_reply(
+                    course=course,
+                    actor=current_user,
+                    reply_text=reply_content,
+                    comment_kind=comment_type,
+                    comment_id=comment_obj.id,
+                    lesson=lesson,
+                )
+
+            notification.is_read = True
+            notification.save(update_fields=['is_read'])
+            messages.success(request, 'Đã gửi phản hồi lại cho giảng viên.')
+            return redirect(target_url)
+
+    csrf_token = get_token(request)
+    comment_preview = escape(comment_obj.content)
+    model_field_names = {field.name for field in comment_obj._meta.concrete_fields}
+    if 'teacher_reply' in model_field_names:
+        teacher_reply_preview = escape(getattr(comment_obj, 'teacher_reply', '') or '')
+    else:
+        teacher_reply_preview = ''
+        latest_teacher_reply = None
+        if teacher_id:
+            latest_teacher_reply = comment_obj.replies.filter(user_id=teacher_id).order_by('-created_at').first()
+        if latest_teacher_reply:
+            teacher_reply_preview = escape(latest_teacher_reply.content or '')
+    notification_text = escape(clean_message)
+
+    html = f"""
+<!DOCTYPE html>
+<html lang=\"vi\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>Phản hồi giảng viên</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; padding: 24px; color: #0f172a; }}
+        .box {{ max-width: 860px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px; }}
+        .note {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 14px; }}
+        textarea {{ width: 100%; min-height: 130px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; margin: 8px 0 12px; }}
+        .actions {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+        .btn {{ display: inline-flex; align-items: center; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; }}
+        .btn-primary {{ border: 0; background: #1d4ed8; color: #fff; cursor: pointer; }}
+        .btn-muted {{ border: 1px solid #cbd5e1; color: #334155; background: #fff; }}
+    </style>
+</head>
+<body>
+    <div class=\"box\">
+        <h2 style=\"margin: 0 0 14px;\">Phản hồi lại giảng viên</h2>
+        <div class=\"note\">
+            <p style=\"margin: 0;\"><strong>Thông báo:</strong> {notification_text}</p>
+            <p style=\"margin: 10px 0 0;\"><strong>Bình luận gốc:</strong> {comment_preview}</p>
+            {f'<p style="margin: 10px 0 0;"><strong>Phản hồi của giảng viên:</strong> {teacher_reply_preview}</p>' if teacher_reply_preview else ''}
+        </div>
+
+        <form method=\"post\">
+            <input type=\"hidden\" name=\"csrfmiddlewaretoken\" value=\"{csrf_token}\">
+            <label for=\"reply_content\" style=\"font-weight: 600;\">Nội dung phản hồi</label>
+            <textarea id=\"reply_content\" name=\"reply_content\" maxlength=\"1000\" required></textarea>
+            <div class=\"actions\">
+                <button class=\"btn btn-primary\" type=\"submit\">Gửi phản hồi</button>
+                <a class=\"btn btn-muted\" href=\"{escape(target_url)}\">Quay lại</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+"""
+
+    return HttpResponse(html)
+
+
+@teacher_required
+def teacher_reply_comment(request, notification_id):
+    current_teacher = getattr(request, 'current_teacher', None) or request.user
+    notification = Notification.objects.filter(id=notification_id, user=current_teacher).first()
+    if not notification:
+        messages.info(request, 'Thông báo này không còn tồn tại hoặc không thuộc tài khoản giảng viên hiện tại.')
+        return redirect('teacher_dashboard')
+    clean_message, meta = parse_comment_notification_message(notification.message)
+
+    if not meta:
+        meta = infer_comment_meta_from_legacy_message(clean_message, request.user)
+        if not meta:
+            messages.warning(request, 'Thông báo này không hỗ trợ trả lời trực tiếp.')
+            return redirect('teacher_dashboard')
+
+    comment_type = meta.get('type')
+    comment_id = meta.get('comment_id')
+    student_id = meta.get('student_id')
+
+    if not comment_type or not comment_id or not student_id:
+        messages.warning(request, 'Dữ liệu thông báo không hợp lệ.')
+        return redirect('teacher_dashboard')
+
+    comment_obj = None
+    target_url = None
+
+    try:
+        if comment_type == 'lesson':
+            comment_obj = LessonComment.objects.select_related('lesson', 'user').get(id=comment_id)
+            target_url = f"/lesson/{comment_obj.lesson_id}/"
+        else:
+            comment_obj = CourseComment.objects.select_related('course', 'user').get(id=comment_id)
+            target_url = f"/course/{comment_obj.course_id}/"
+    except (LessonComment.DoesNotExist, CourseComment.DoesNotExist):
+        comment_obj = None
+
+    if not comment_obj:
+        messages.warning(request, 'Không tìm thấy bình luận gốc để phản hồi. Vui lòng mở lại từ thông báo mới nhất.')
+        return redirect('teacher_dashboard')
+
+    if request.method == 'POST':
+        reply_content = (request.POST.get('reply_content') or '').strip()
+
+        if not reply_content:
+            messages.error(request, 'Nội dung phản hồi không được để trống.')
+        else:
+            # New schema: teacher reply is stored as a child comment.
+            # Legacy schema fallback keeps older deployments working.
+            model_field_names = {field.name for field in comment_obj._meta.concrete_fields}
+            if 'teacher_reply' in model_field_names and 'teacher_replied_at' in model_field_names:
+                comment_obj.teacher_reply = reply_content
+                comment_obj.teacher_replied_at = timezone.now()
+                comment_obj.save(update_fields=['teacher_reply', 'teacher_replied_at'])
+            else:
+                reply_model = LessonComment if comment_type == 'lesson' else CourseComment
+                fallback_rating = comment_obj.rating if getattr(comment_obj, 'rating', None) else 5
+                create_kwargs = {
+                    'user': request.user,
+                    'content': reply_content,
+                    'rating': fallback_rating,
+                    'parent_comment': comment_obj,
+                }
+                if comment_type == 'lesson':
+                    create_kwargs['lesson'] = comment_obj.lesson
+                else:
+                    create_kwargs['course'] = comment_obj.course
+
+                reply_model.objects.create(**create_kwargs)
+
+            student = User.objects.filter(id=student_id).first()
+            if student:
+                destination = comment_obj.lesson.title if comment_type == 'lesson' else comment_obj.course.title
+                student_meta = {
+                    'type': comment_type,
+                    'comment_id': str(comment_obj.id),
+                    'student_id': str(student.id),
+                    'teacher_id': str(request.user.id),
+                    'course_id': str(comment_obj.lesson.course_id) if comment_type == 'lesson' else str(comment_obj.course_id),
+                }
+                if comment_type == 'lesson':
+                    student_meta['lesson_id'] = str(comment_obj.lesson_id)
+
+                Notification.objects.create(
+                    user=student,
+                    message=build_comment_notification_message(
+                        f"Giảng viên {request.user.username} đã phản hồi bình luận của bạn ở '{destination}': \"{reply_content[:150]}\"",
+                        student_meta,
+                    )
+                )
+
+            notification.is_read = True
+            notification.save(update_fields=['is_read'])
+            messages.success(request, 'Đã gửi phản hồi cho học viên.')
+            return redirect('teacher_dashboard')
+
+    csrf_token = get_token(request)
+    comment_preview = escape(comment_obj.content) if comment_obj else ''
+    notification_text = escape(clean_message)
+    back_url = target_url or '/teacher/'
+
+    html = f"""
+<!DOCTYPE html>
+<html lang=\"vi\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>Phản hồi bình luận</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; padding: 24px; color: #0f172a; }}
+        .box {{ max-width: 860px; margin: 0 auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px; }}
+        .note {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 14px; }}
+        textarea {{ width: 100%; min-height: 130px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; margin: 8px 0 12px; }}
+        .actions {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+        .btn {{ display: inline-flex; align-items: center; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-weight: 600; }}
+        .btn-primary {{ border: 0; background: #1d4ed8; color: #fff; cursor: pointer; }}
+        .btn-muted {{ border: 1px solid #cbd5e1; color: #334155; background: #fff; }}
+    </style>
+</head>
+<body>
+    <div class=\"box\">
+        <h2 style=\"margin: 0 0 14px;\">Phản hồi bình luận học viên</h2>
+        <div class=\"note\">
+            <p style=\"margin: 0;\"><strong>Thông báo:</strong> {notification_text}</p>
+            {f'<p style="margin: 10px 0 0;"><strong>Bình luận gốc:</strong> {comment_preview}</p>' if comment_obj else ''}
+        </div>
+
+        <form method=\"post\">
+            <input type=\"hidden\" name=\"csrfmiddlewaretoken\" value=\"{csrf_token}\">
+            <label for=\"reply_content\" style=\"font-weight: 600;\">Nội dung phản hồi</label>
+            <textarea id=\"reply_content\" name=\"reply_content\" maxlength=\"1000\" required></textarea>
+            <div class=\"actions\">
+                <button class=\"btn btn-primary\" type=\"submit\">Gửi phản hồi</button>
+                <a class=\"btn btn-muted\" href=\"{escape(back_url)}\">Quay lại</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+"""
+    return HttpResponse(html)
     

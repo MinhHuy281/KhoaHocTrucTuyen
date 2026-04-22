@@ -40,6 +40,38 @@
         <div class="auth">
             {% if current_user %}
                 <div class="user-box user-menu-box">
+                    <div class="noti-box" id="userNotiBox">
+                        <button type="button" class="noti-btn" id="userNotiBtn" aria-label="Thông báo">
+                            <i class="bi bi-bell"></i>
+                            {% if user_unread_count and user_unread_count > 0 %}
+                                <span class="noti-badge">{{ user_unread_count }}</span>
+                            {% endif %}
+                        </button>
+
+                        <div class="noti-dropdown" id="userNotiDropdown">
+                            <div class="noti-head" style="padding: 6px 0 10px;">
+                                <h4 style="margin:0; font-size:13px;">🔔 Thông báo</h4>
+                                <button type="button" class="noti-mark" onclick="markUserNotiRead(event)">Đánh dấu đã đọc</button>
+                            </div>
+
+                            {% for noti in user_notifications %}
+                                {% if noti.reply_url %}
+                                    <a href="{{ noti.reply_url }}" class="noti-item noti-item-link">
+                                        <div>{{ noti.message }}</div>
+                                        <div class="noti-time">{{ noti.created_at|date:"d/m/Y H:i" }}</div>
+                                    </a>
+                                {% else %}
+                                    <div class="noti-item">
+                                        <div>{{ noti.message }}</div>
+                                        <div class="noti-time">{{ noti.created_at|date:"d/m/Y H:i" }}</div>
+                                    </div>
+                                {% endif %}
+                            {% empty %}
+                                <div class="noti-item">Không có thông báo</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <details class="user-menu-dropdown" id="userMenuBox">
                         <summary class="user-menu-trigger">
                             <span class="user-avatar">
@@ -155,11 +187,44 @@ function syncCsrfTokenForForms() {
     });
 }
 
+function markUserNotiRead(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    fetch("/mark-user-notifications-read/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+            "Content-Type": "application/json"
+        }
+    }).then(() => {
+        location.reload();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     syncCsrfTokenForForms();
     document.querySelectorAll('form').forEach((form) => {
         form.addEventListener('submit', syncCsrfTokenForForms);
     });
+
+    const userNotiBox = document.getElementById('userNotiBox');
+    const userNotiBtn = document.getElementById('userNotiBtn');
+    if (userNotiBox && userNotiBtn) {
+        userNotiBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            userNotiBox.classList.toggle('is-open');
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!userNotiBox.contains(event.target)) {
+                userNotiBox.classList.remove('is-open');
+            }
+        });
+    }
 
     const userMenuBox = document.getElementById('userMenuBox');
     if (userMenuBox) {

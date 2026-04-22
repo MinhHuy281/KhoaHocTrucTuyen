@@ -1,6 +1,7 @@
 from django.contrib import admin
+from django.db.models import Avg, Count
 from .models import *
-from .models import Course, Lesson, Enrollment, Level, Grade, Subject, Quiz, Question, Choice, UserQuizAttempt, Notification
+from .models import Course, Lesson, Enrollment, Level, Grade, Subject, Quiz, Question, Choice, UserQuizAttempt, Notification, LessonComment, CourseComment
 
 # ================= LEVEL, GRADE, SUBJECT =================
 @admin.register(Level)
@@ -81,7 +82,7 @@ class EnrollmentAdmin(admin.ModelAdmin):
 # ================= LESSON =================
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
-    list_display = ('title', 'course', 'order', 'is_free_preview')
+    list_display = ('title', 'course', 'order', 'is_free_preview', 'avg_rating_display', 'rating_count')
     list_filter = ('course', 'is_free_preview')
     search_fields = ('title', 'course__title')
     list_editable = ('order', 'is_free_preview')
@@ -97,6 +98,38 @@ class LessonAdmin(admin.ModelAdmin):
             'fields': ('is_free_preview',)
         }),
     )
+
+    def avg_rating_display(self, obj):
+        lesson_avg = obj.comments.filter(rating__isnull=False).aggregate(avg=Avg('rating'))['avg']
+        if lesson_avg is not None:
+            return f"{lesson_avg:.1f}"
+
+        # Fallback: nếu user đánh giá ở cấp khóa học, vẫn phản ánh cho bài học thuộc khóa đó.
+        course_avg = CourseComment.objects.filter(
+            course=obj.course,
+            rating__isnull=False,
+        ).aggregate(avg=Avg('rating'))['avg']
+
+        if course_avg is None:
+            return '0.0'
+
+        return f"{course_avg:.1f}"
+
+    avg_rating_display.short_description = 'Đánh giá TB'
+    avg_rating_display.admin_order_field = 'id'
+
+    def rating_count(self, obj):
+        lesson_count = obj.comments.filter(rating__isnull=False).count()
+        if lesson_count:
+            return lesson_count
+
+        return CourseComment.objects.filter(
+            course=obj.course,
+            rating__isnull=False,
+        ).count()
+
+    rating_count.short_description = 'Lượt đánh giá'
+    rating_count.admin_order_field = 'id'
 
 # ================= QUIZ =================
 class ChoiceInline(admin.TabularInline):
@@ -156,6 +189,22 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ('user', 'message', 'is_read', 'created_at')
     list_filter = ('is_read', 'created_at')
     search_fields = ('user__username', 'message')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(LessonComment)
+class LessonCommentAdmin(admin.ModelAdmin):
+    list_display = ('lesson', 'user', 'rating', 'created_at')
+    list_filter = ('rating', 'created_at', 'lesson')
+    search_fields = ('lesson__title', 'user__username', 'content')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(CourseComment)
+class CourseCommentAdmin(admin.ModelAdmin):
+    list_display = ('course', 'user', 'rating', 'created_at')
+    list_filter = ('rating', 'created_at', 'course')
+    search_fields = ('course__title', 'user__username', 'content')
     readonly_fields = ('created_at',)
 
 # Customize admin site header

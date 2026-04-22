@@ -117,6 +117,321 @@
     color: #334155;
 }
 
+.lesson-feedback {
+    margin-top: 26px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.lesson-feedback h2 {
+    margin: 0 0 14px;
+    color: #0f172a;
+}
+
+.rating-overview {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.rating-overview__score {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #dbe4f1;
+    background: #f8fbff;
+}
+
+.rating-overview__value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.rating-overview__count {
+    margin-top: 8px;
+    color: #475569;
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rating-score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.rating-score-badge__star {
+    color: #f59e0b;
+}
+
+.rating-score-badge__value {
+    font-variant-numeric: tabular-nums;
+}
+
+.rating-score-badge__max {
+    color: #c2410c;
+    font-weight: 600;
+}
+
+.rating-summary__star {
+    color: #f59e0b;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.stars-display {
+    position: relative;
+    display: inline-block;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.stars-display::before {
+    content: "★★★★★";
+    color: #cbd5e1;
+}
+
+.stars-display::after {
+    content: "★★★★★";
+    color: #f59e0b;
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(var(--rating, 0) / 5 * 100%);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.rating-bars {
+    display: grid;
+    gap: 8px;
+}
+
+.rating-row {
+    display: grid;
+    grid-template-columns: 48px 1fr 34px;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #334155;
+}
+
+.rating-row__track {
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.rating-row__fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.comment-form {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+    margin-top: 14px;
+}
+
+.comment-form textarea {
+    width: 100%;
+    min-height: 110px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    resize: vertical;
+    font-size: 0.95rem;
+}
+
+.comment-form__label {
+    display: block;
+    margin-bottom: 8px;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.rating-input {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 4px;
+    margin: 12px 0 14px;
+}
+
+.rating-input input {
+    display: none;
+}
+
+.rating-input label {
+    font-size: 1.7rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.rating-input label:hover,
+.rating-input label:hover ~ label,
+.rating-input input:checked ~ label {
+    color: #f59e0b;
+}
+
+.comment-form button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    background: #1d4ed8;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.comment-list {
+    margin-top: 20px;
+    display: grid;
+    gap: 12px;
+}
+
+.comment-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    background: #f8fafc;
+}
+
+.comment-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.comment-card__user {
+    margin: 0;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.comment-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 0.84rem;
+}
+
+.comment-card__content {
+    margin: 0;
+    color: #334155;
+    white-space: pre-wrap;
+}
+
+.comment-card__reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid #2563eb;
+    border-radius: 8px;
+    background: #eff6ff;
+}
+
+.comment-card__reply--thread {
+    margin-left: 28px;
+}
+
+.comment-card__reply--nested {
+    border-left-color: #16a34a;
+    background: #ecfdf3;
+}
+
+.comment-card__reply-title {
+    margin: 0 0 4px;
+    font-size: 0.82rem;
+    color: #1e40af;
+    font-weight: 700;
+}
+
+.comment-card__reply-content {
+    margin: 0;
+    color: #1e293b;
+    white-space: pre-wrap;
+}
+
+.comment-card__user-reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid #16a34a;
+    border-radius: 8px;
+    background: #ecfdf3;
+}
+
+.comment-card__user-reply-title {
+    margin: 0 0 4px;
+    font-size: 0.82rem;
+    color: #166534;
+    font-weight: 700;
+}
+
+.comment-reply-form {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.comment-reply-form--thread {
+    margin-left: 28px;
+}
+
+.comment-reply-form textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    resize: vertical;
+    margin-bottom: 8px;
+}
+
+.comment-reply-form button {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #16a34a;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.comment-login-note {
+    margin-top: 12px;
+    color: #475569;
+}
+
+@media (max-width: 768px) {
+    .rating-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .comment-card__head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 @media (max-width: 768px) {
     .slide-panel__head {
         flex-direction: column;
@@ -216,6 +531,130 @@
 {{lesson.content}}
 
 </div>
+
+<section class="lesson-feedback" aria-label="Bình luận và đánh giá">
+    <h2>Danh gia bai hoc</h2>
+
+    {% if not comments_enabled %}
+        <p class="comment-login-note">Chức năng bình luận đang tạm tắt vì hệ thống chưa tạo bảng dữ liệu mới.</p>
+    {% else %}
+
+    <div class="rating-overview">
+        <div class="rating-overview__score">
+            <div class="rating-overview__value" aria-label="{{ average_rating }} trên 5 sao">{{ average_rating }} sao</div>
+            <div class="rating-overview__count">
+                <span class="rating-summary__star" aria-hidden="true">★</span>
+                <span>{{ total_ratings }} đánh giá</span>
+            </div>
+        </div>
+
+        <div class="rating-bars">
+            {% for row in rating_rows %}
+                <div class="rating-row">
+                    <span>{{ row.star }} sao</span>
+                    <div class="rating-row__track">
+                        <div
+                            class="rating-row__fill"
+                            style="width: {{ row.percent }}%;">
+                        </div>
+                    </div>
+                    <span>{{ row.count }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if user.is_authenticated and can_comment %}
+        <form method="post" class="comment-form">
+            {% csrf_token %}
+            <label class="comment-form__label" for="comment-content">Viết bình luận của bạn</label>
+            <textarea id="comment-content" name="content" maxlength="1000" placeholder="Chia sẻ cảm nhận của bạn về bài học..." required></textarea>
+
+            <div class="rating-input" aria-label="Chọn số sao">
+                {% for star in rating_scale %}
+                    <input type="radio" id="rating-{{ star }}" name="rating" value="{{ star }}" required>
+                    <label for="rating-{{ star }}" title="{{ star }} sao">★</label>
+                {% endfor %}
+            </div>
+
+            <button type="submit">Gửi bình luận</button>
+        </form>
+    {% else %}
+        <div class="locked-comment" style="background: #f8fafc; border: 2px solid #cbd5e1; border-radius: 12px; padding: 40px 24px; text-align: center; margin: 24px 0;">
+            <div style="font-size: 64px; margin-bottom: 16px;">🔒</div>
+            <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 20px; font-weight: 600;">Đánh giá và bình luận đã bị khóa</h3>
+            <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px;">Đăng ký và thanh toán khóa học để mở khóa chức năng bình luận và đánh giá.</p>
+            {% if user.is_authenticated %}
+                <a href="{% url 'course_detail' course.id %}" style="display: inline-block; padding: 12px 28px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">📝 Đăng ký khóa học</a>
+            {% else %}
+                <a href="{% url 'login' %}" style="display: inline-block; padding: 12px 28px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Đăng nhập để đăng ký</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="comment-list">
+        {% for comment in comments %}
+            <article class="comment-card">
+                <div class="comment-card__head">
+                    <p class="comment-card__user">{{ comment.user.username }}</p>
+                    <div class="comment-card__meta">
+                        <div class="stars-display" style="--rating: {{ comment.rating }};" aria-label="{{ comment.rating }} trên 5 sao"></div>
+                        {% if comment.rating %}
+                            <span>{{ comment.rating }} sao</span>
+                        {% endif %}
+                        <span>{{ comment.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+                <p class="comment-card__content">{{ comment.content }}</p>
+                {% if comment.replies.all %}
+                    {% for reply in comment.replies.all %}
+                        <div class="comment-card__reply comment-card__reply--thread{% if reply.user_id == user.id %} comment-card__reply--nested{% endif %}">
+                            <p class="comment-card__reply-title">
+                                {% if reply.user_id == lesson.course.teacher_id %}
+                                    Phản hồi từ giảng viên
+                                {% elif reply.user_id == comment.user_id %}
+                                    Phản hồi từ học viên
+                                {% else %}
+                                    Phản hồi từ {{ reply.user.username }}
+                                {% endif %}
+                                - {{ reply.created_at|date:"d/m/Y H:i" }}
+                            </p>
+                            <p class="comment-card__reply-content">{{ reply.content }}</p>
+                        </div>
+                    {% endfor %}
+                {% elif comment.teacher_reply %}
+                    <div class="comment-card__reply comment-card__reply--thread">
+                        <p class="comment-card__reply-title">Phản hồi từ giảng viên{% if comment.teacher_replied_at %} - {{ comment.teacher_replied_at|date:"d/m/Y H:i" }}{% endif %}</p>
+                        <p class="comment-card__reply-content">{{ comment.teacher_reply }}</p>
+                    </div>
+
+                    {% if comment.user_reply %}
+                        <div class="comment-card__user-reply comment-card__reply--thread comment-card__reply--nested">
+                            <p class="comment-card__user-reply-title">Bạn đã phản hồi lại{% if comment.user_replied_at %} - {{ comment.user_replied_at|date:"d/m/Y H:i" }}{% endif %}</p>
+                            <p class="comment-card__reply-content">{{ comment.user_reply }}</p>
+                        </div>
+                    {% endif %}
+
+                {% endif %}
+
+                {% if can_comment %}
+                    <form method="post" class="comment-reply-form comment-reply-form--thread">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reply_comment">
+                        <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                        <textarea name="reply_content" maxlength="1000" placeholder="Phản hồi bình luận này..." required></textarea>
+                        <button type="submit">Phản hồi</button>
+                    </form>
+                {% endif %}
+            </article>
+        {% empty %}
+            <article class="comment-card">
+                <p class="comment-card__content">Chưa có bình luận nào. Hãy là người đầu tiên đánh giá bài học này.</p>
+            </article>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
 
 </div>
 

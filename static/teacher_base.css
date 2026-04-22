@@ -109,6 +109,12 @@
     border-radius: 8px;
 }
 
+.teacher-noti-item--link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
 .teacher-noti-msg {
     font-size: 10px;
     line-height: 1.45;

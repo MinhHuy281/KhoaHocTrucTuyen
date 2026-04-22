@@ -612,6 +612,303 @@
     box-shadow: 0 12px 28px rgba(255,255,255,0.18);
 }
 
+.course-feedback {
+    margin-top: 28px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 22px;
+    background: #fff;
+}
+
+.course-feedback h2 {
+    margin: 0 0 16px;
+    color: #0f172a;
+    font-size: 1.35rem;
+}
+
+.course-feedback__overview {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 18px;
+    margin-bottom: 16px;
+}
+
+.course-feedback__score {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #dbe4f1;
+    background: #f8fbff;
+}
+
+.course-feedback__value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.course-feedback__count {
+    margin-top: 8px;
+    color: #475569;
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rating-score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.rating-score-badge__star {
+    color: #f59e0b;
+}
+
+.rating-score-badge__value {
+    font-variant-numeric: tabular-nums;
+}
+
+.rating-score-badge__max {
+    color: #c2410c;
+    font-weight: 600;
+}
+
+.rating-summary__star {
+    color: #f59e0b;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.stars-display {
+    position: relative;
+    display: inline-block;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.stars-display::before {
+    content: "★★★★★";
+    color: #cbd5e1;
+}
+
+.stars-display::after {
+    content: "★★★★★";
+    color: #f59e0b;
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(var(--rating, 0) / 5 * 100%);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.course-feedback__bars {
+    display: grid;
+    gap: 8px;
+}
+
+.course-feedback__row {
+    display: grid;
+    grid-template-columns: 48px 1fr 34px;
+    align-items: center;
+    gap: 10px;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.course-feedback__track {
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.course-feedback__fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.course-comment-form {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 14px;
+    padding-top: 16px;
+}
+
+.course-comment-form__label {
+    display: block;
+    margin-bottom: 8px;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.course-comment-form textarea {
+    width: 100%;
+    min-height: 110px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    resize: vertical;
+    font-size: 0.95rem;
+}
+
+.rating-input {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 4px;
+    margin: 12px 0 14px;
+}
+
+.rating-input input {
+    display: none;
+}
+
+.rating-input label {
+    font-size: 1.7rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.rating-input label:hover,
+.rating-input label:hover ~ label,
+.rating-input input:checked ~ label {
+    color: #f59e0b;
+}
+
+.course-comment-form button {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    background: #1d4ed8;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.course-comment-login-note {
+    margin-top: 12px;
+    color: #475569;
+}
+
+.course-comment-list {
+    margin-top: 20px;
+    display: grid;
+    gap: 12px;
+}
+
+.course-comment-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    background: #f8fafc;
+}
+
+.course-comment-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.course-comment-card__user {
+    margin: 0;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.course-comment-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 0.84rem;
+}
+
+.course-comment-card__content {
+    margin: 0;
+    color: #334155;
+    white-space: pre-wrap;
+}
+
+.course-comment-card__reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid #2563eb;
+    border-radius: 8px;
+    background: #eff6ff;
+}
+
+.course-comment-card__reply--thread {
+    margin-left: 28px;
+}
+
+.course-comment-card__reply--nested {
+    border-left-color: #16a34a;
+    background: #ecfdf3;
+}
+
+.course-comment-card__reply-title {
+    margin: 0 0 4px;
+    font-size: 0.82rem;
+    color: #1e40af;
+    font-weight: 700;
+}
+
+.course-comment-card__reply-content {
+    margin: 0;
+    color: #1e293b;
+    white-space: pre-wrap;
+}
+
+.course-comment-card__user-reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid #16a34a;
+    border-radius: 8px;
+    background: #ecfdf3;
+}
+
+.course-comment-reply-form {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.course-comment-reply-form--thread {
+    margin-left: 28px;
+}
+
+.course-comment-reply-form textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    resize: vertical;
+    margin-bottom: 8px;
+}
+
+.course-comment-reply-form button {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #16a34a;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .slide-panel {
@@ -698,5 +995,14 @@
 
     .quiz-card__button {
         width: 100%;
+    }
+
+    .course-feedback__overview {
+        grid-template-columns: 1fr;
+    }
+
+    .course-comment-card__head {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

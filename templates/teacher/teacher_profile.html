@@ -1,5 +1,6 @@
 {% extends "teacher/teacher_base.html" %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Hồ sơ giảng viên{% endblock %}
 
@@ -80,6 +81,7 @@
                                 <th>Lớp</th>
                                 <th>Học viên đã duyệt</th>
                                 <th>Số bài ôn luyện</th>
+                                <th>Đánh giá</th>
                                 <th>Giá</th>
                             </tr>
                         </thead>
@@ -91,6 +93,13 @@
                                     <td>{{ course.grade }}</td>
                                     <td>{{ course.approved_students }}</td>
                                     <td>{{ course.quizzes_count }}</td>
+                                    <td>
+                                        {% if course.rating_count %}
+                                            {{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }})
+                                        {% else %}
+                                            0.0/5 (0)
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if course.is_free %}
                                             <span class="status-pill approved">Miễn phí</span>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Khóa Học{% endblock %}
 
@@ -84,6 +85,17 @@
                 <div class="course-info">
                     <h3>{{ course.title }}</h3>
                     <p>Môn: {{ course.subject }} • Lớp: {{ course.grade }} • Cấp: {{ course.level }}</p>
+                    <p class="course-rating-line">
+                        {% if course.rating_count %}
+                            <span>Đánh giá:</span>
+                            <span class="rating-stars" style="--rating: {{ course.avg_rating|rating_css }};" aria-label="{{ course.avg_rating|floatformat:1 }} trên 5 sao"></span>
+                            <span>{{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }} lượt)</span>
+                        {% else %}
+                            <span>Đánh giá:</span>
+                            <span class="rating-stars" style="--rating: 0;" aria-label="0 trên 5 sao"></span>
+                            <span>0.0/5 (0 lượt)</span>
+                        {% endif %}
+                    </p>
                     <div class="price">{{ course.price|format_vnd }} VNĐ</div>
                     <a href="{% url 'course_detail' course.id %}" class="btn-detail">Xem chi tiết →</a>
                 </div>

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from django.utils import timezone
 
@@ -248,3 +249,81 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.message
+
+
+class LessonComment(models.Model):
+    lesson = models.ForeignKey('Lesson', on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lesson_comments')
+    content = models.TextField(max_length=1000)
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        null=True,
+        blank=True  # Nested comments không cần rating
+    )
+    
+    # 🆕 Hỗ trợ nested comments: comment trả lời comment
+    parent_comment = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        related_name='replies',
+        null=True,
+        blank=True
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        if self.parent_comment:
+            return f"{self.user.username} phản hồi {self.parent_comment.user.username} - {self.lesson.title}"
+        return f"{self.user.username} - {self.lesson.title} ({self.rating} sao)"
+    
+    # 🆕 Lấy tất cả replies
+    def get_all_replies(self):
+        return self.replies.all().prefetch_related('user')
+    
+    # 🆕 Kiểm tra có phải comment gốc không
+    def is_root_comment(self):
+        return self.parent_comment is None
+
+
+class CourseComment(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_comments')
+    content = models.TextField(max_length=1000)
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        null=True,
+        blank=True  # Nested comments không cần rating
+    )
+    
+    # 🆕 Hỗ trợ nested comments: comment trả lời comment
+    parent_comment = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        related_name='replies',
+        null=True,
+        blank=True
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        if self.parent_comment:
+            return f"{self.user.username} phản hồi {self.parent_comment.user.username} - {self.course.title}"
+        return f"{self.user.username} - {self.course.title} ({self.rating} sao)"
+    
+    # 🆕 Lấy tất cả replies
+    def get_all_replies(self):
+        return self.replies.all().prefetch_related('user')
+    
+    # 🆕 Kiểm tra có phải comment gốc không
+    def is_root_comment(self):
+        return self.parent_comment is None

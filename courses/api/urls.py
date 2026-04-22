@@ -1,5 +1,6 @@
-from django.urls import path
+from django.urls import path, re_path
 from . import views as api_views
+from rest_framework.routers import SimpleRouter
 
 urlpatterns = [
     # ==================== AUTH ====================
@@ -54,4 +55,36 @@ urlpatterns = [
     # ==================== NOTIFICATION ====================
     path('notifications/', api_views.NotificationListAPI.as_view(), name='api-notification-list'),
     path('notifications/<int:pk>/read/', api_views.NotificationMarkAsReadAPI.as_view(), name='api-notification-mark-read'),
+    
+    # ==================== LESSON COMMENTS ====================
+    # Danh sách comments gốc của một bài học
+    path('lessons/<int:lesson_id>/comments/', 
+         api_views.LessonCommentViewSet.as_view({'get': 'list', 'post': 'create'}), 
+         name='api-lesson-comments'),
+    
+    # Chi tiết comment, xóa comment
+    path('lessons/<int:lesson_id>/comments/<int:pk>/', 
+         api_views.LessonCommentViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'}), 
+         name='api-lesson-comment-detail'),
+    
+    # Trả lời comment
+    path('lessons/<int:lesson_id>/comments/<int:pk>/reply/', 
+         api_views.LessonCommentViewSet.as_view({'post': 'reply_comment'}), 
+         name='api-lesson-comment-reply'),
+    
+    # ==================== COURSE COMMENTS ====================
+    # Danh sách comments gốc của một khóa học
+    path('courses/<int:course_id>/comments/', 
+         api_views.CourseCommentViewSet.as_view({'get': 'list', 'post': 'create'}), 
+         name='api-course-comments'),
+    
+    # Chi tiết comment, xóa comment
+    path('courses/<int:course_id>/comments/<int:pk>/', 
+         api_views.CourseCommentViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'}), 
+         name='api-course-comment-detail'),
+    
+    # Trả lời comment
+    path('courses/<int:course_id>/comments/<int:pk>/reply/', 
+         api_views.CourseCommentViewSet.as_view({'post': 'reply_comment'}), 
+         name='api-course-comment-reply'),
 ]

@@ -7,7 +7,8 @@ from django.shortcuts import get_object_or_404
 
 from ..models import (
     Course, Quiz, Question, Choice, Lesson, Level, Grade, Subject,
-    Enrollment, UserQuizAttempt, UserAnswer, Notification
+    Enrollment, UserQuizAttempt, UserAnswer, Notification,
+    LessonComment, CourseComment
 )
 from accounts.models import UserProfile
 from .serializers import (
@@ -21,7 +22,11 @@ from .serializers import (
     UserQuizAttemptSerializer, UserQuizAttemptDetailSerializer,
     UserAnswerSerializer,
     UserSerializer, UserDetailSerializer,
-    NotificationSerializer
+    NotificationSerializer,
+    LessonCommentSerializer,
+    LessonCommentCreateSerializer,
+    CourseCommentSerializer,
+    CourseCommentCreateSerializer
 )
 from .permissions import IsTeacher, IsTeacherOrReadOnly, IsTeacherOrOwner, IsEnrolledOrTeacher
 
@@ -450,3 +455,129 @@ class NotificationMarkAsReadAPI(generics.UpdateAPIView):
         notification.is_read = True
         notification.save()
         return Response(NotificationSerializer(notification).data)
+
+
+# ==================== LESSON COMMENTS ====================
+class LessonCommentViewSet(viewsets.ModelViewSet):
+    """API ViewSet cho Lesson Comments"""
+    permission_classes = [permissions.IsAuthenticated, IsEnrolledOrTeacher]
+    
+    def get_lesson(self):
+        return get_object_or_404(Lesson, id=self.kwargs.get('lesson_id'))
+    
+    def get_queryset(self):
+        lesson = self.get_lesson()
+        return (
+            lesson.comments
+            .filter(parent_comment__isnull=True)
+            .prefetch_related('user', 'replies__user')
+            .order_by('-created_at')
+        )
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return LessonCommentCreateSerializer
+        return LessonCommentSerializer
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['lesson_id'] = self.kwargs.get('lesson_id')
+        return context
+    
+    def perform_create(self, serializer):
+        serializer.save()
+    
+    @action(detail=True, methods=['post'], url_path='reply')
+    def reply_comment(self, request, pk=None, lesson_id=None):
+        lesson = self.get_lesson()
+        parent_comment = get_object_or_404(LessonComment, id=pk, lesson=lesson, parent_comment__isnull=True)
+        
+        serializer = LessonCommentCreateSerializer(
+            data=request.data,
+            context={'request': request, 'lesson_id': lesson.id}
+        )
+        
+        if serializer.is_valid():
+            serializer.validated_data['parent_comment'] = parent_comment
+            serializer.save()
+            return Response(
+                LessonCommentSerializer(serializer.instance).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, pk=None, lesson_id=None):
+        lesson = self.get_lesson()
+        comment = get_object_or_404(LessonComment, id=pk, lesson=lesson)
+        
+        if request.user != comment.user and request.user != lesson.course.teacher:
+            return Response(
+                {'error': 'Bạn không có quyền xóa comment này'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ==================== COURSE COMMENTS ====================
+class CourseCommentViewSet(viewsets.ModelViewSet):
+    """API ViewSet cho Course Comments"""
+    permission_classes = [permissions.IsAuthenticated, IsEnrolledOrTeacher]
+    
+    def get_course(self):
+        return get_object_or_404(Course, id=self.kwargs.get('course_id'))
+    
+    def get_queryset(self):
+        course = self.get_course()
+        return (
+            course.comments
+            .filter(parent_comment__isnull=True)
+            .prefetch_related('user', 'replies__user')
+            .order_by('-created_at')
+        )
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CourseCommentCreateSerializer
+        return CourseCommentSerializer
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['course_id'] = self.kwargs.get('course_id')
+        return context
+    
+    def perform_create(self, serializer):
+        serializer.save()
+    
+    @action(detail=True, methods=['post'], url_path='reply')
+    def reply_comment(self, request, pk=None, course_id=None):
+        course = self.get_course()
+        parent_comment = get_object_or_404(CourseComment, id=pk, course=course, parent_comment__isnull=True)
+        
+        serializer = CourseCommentCreateSerializer(
+            data=request.data,
+            context={'request': request, 'course_id': course.id}
+        )
+        
+        if serializer.is_valid():
+            serializer.validated_data['parent_comment'] = parent_comment
+            serializer.save()
+            return Response(
+                CourseCommentSerializer(serializer.instance).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, pk=None, course_id=None):
+        course = self.get_course()
+        comment = get_object_or_404(CourseComment, id=pk, course=course)
+        
+        if request.user != comment.user and request.user != course.teacher:
+            return Response(
+                {'error': 'Bạn không có quyền xóa comment này'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

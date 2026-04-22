@@ -1,5 +1,6 @@
 {% extends "teacher/teacher_base.html" %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Dashboard Giáo Viên{% endblock %}
 
@@ -51,6 +52,16 @@
             <div class="course-meta">
               <span>Môn: {{ course.subject }}</span>
               <span>Lớp: {{ course.grade }}</span>
+            </div>
+
+            <div class="course-rating-inline">
+              {% if course.rating_count %}
+                <div class="rating-stars" style="--rating: {{ course.avg_rating|rating_css }};" aria-label="{{ course.avg_rating|floatformat:1 }} trên 5 sao"></div>
+                <span>{{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }} đánh giá)</span>
+              {% else %}
+                <div class="rating-stars" style="--rating: 0;" aria-label="0 trên 5 sao"></div>
+                <span>0.0/5 (0 đánh giá)</span>
+              {% endif %}
             </div>
 
             <div class="course-footer">

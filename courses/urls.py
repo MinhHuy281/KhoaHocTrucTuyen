@@ -66,6 +66,9 @@ urlpatterns = [
     path('teacher/quizzes/', views.teacher_quiz_results, name='teacher_quiz_results'),
     
     path('teacher/attempt/<int:attempt_id>/', views.teacher_attempt_detail, name='teacher_attempt_detail'),
+
+    path('teacher/notifications/<int:notification_id>/reply/', views.teacher_reply_comment, name='teacher_reply_comment'),
+    path('notifications/<int:notification_id>/reply/', views.user_reply_comment, name='user_reply_comment'),
     
     # ===== QUIZ MANAGEMENT (Quản lý ôn luyện) =====
     path('teacher/quiz-management/', views.teacher_quiz_management, name='teacher_quiz_management'),
@@ -86,6 +89,7 @@ urlpatterns = [
     path('payment/<int:enrollment_id>/', views.payment, name='payment'),
 
     path('mark-notifications-read/', views.mark_notifications_read),
+    path('mark-user-notifications-read/', views.mark_user_notifications_read),
     
 
 
