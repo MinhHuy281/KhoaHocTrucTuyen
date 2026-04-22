@@ -50,3 +50,15 @@ def format_vnd(value):
         return value
 
     return f"{number:,}".replace(",", ".")
+
+
+@register.filter
+def rating_css(value):
+    """Format a rating for CSS custom properties using a dot decimal separator."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return 0
+
+    text = f"{number:.2f}".rstrip("0").rstrip(".")
+    return text

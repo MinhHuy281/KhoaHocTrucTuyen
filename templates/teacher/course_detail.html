@@ -60,6 +60,16 @@
                     <div class="price">{{ course.price|format_vnd }} VNĐ</div>
                 {% endif %}
 
+                <div class="course-rating-inline">
+                    {% if course.rating_count %}
+                        <div class="rating-stars" style="--rating: {{ course.avg_rating|rating_css }};" aria-label="{{ course.avg_rating|floatformat:1 }} trên 5 sao"></div>
+                        <span>{{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }} đánh giá)</span>
+                    {% else %}
+                        <div class="rating-stars" style="--rating: 0;" aria-label="0 trên 5 sao"></div>
+                        <span>0.0/5 (0 đánh giá)</span>
+                    {% endif %}
+                </div>
+
                 <div style="display:flex; gap:10px; flex-wrap: wrap;">
                     <a href="{% url 'teacher_edit' course.id %}" class="btn-enroll">
                         ✏️ Chỉnh sửa
@@ -129,6 +139,61 @@
             {% endfor %}
         </div>
     </div>
+
+    <section class="course-feedback" aria-label="Đánh giá khóa học">
+        <h2>Đánh giá và bình luận từ học viên</h2>
+
+        <div class="course-feedback__overview">
+            <div class="course-feedback__score">
+                <div class="course-feedback__value" aria-label="{{ average_rating }} trên 5 sao">{{ average_rating }} sao</div>
+                <div class="course-feedback__count">
+                    <span class="rating-summary__star" aria-hidden="true">★</span>
+                    <span>{{ total_ratings }} đánh giá</span>
+                </div>
+            </div>
+
+            <div class="course-feedback__bars">
+                {% for row in rating_rows %}
+                    <div class="course-feedback__row">
+                        <span>{{ row.star }} sao</span>
+                        <div class="course-feedback__track">
+                            <div class="course-feedback__fill" style="width: {{ row.percent }}%;"></div>
+                        </div>
+                        <span>{{ row.count }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="course-comment-list">
+            {% for comment in comments %}
+                <article class="course-comment-card">
+                    <div class="course-comment-card__head">
+                        <p class="course-comment-card__user">{{ comment.user.username }}</p>
+                        <div class="course-comment-card__meta">
+                            <div class="stars-display" style="--rating: {{ comment.rating }};" aria-label="{{ comment.rating }} trên 5 sao"></div>
+                            <span>{{ comment.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                    <p class="course-comment-card__content">{{ comment.content }}</p>
+                    {% if comment.replies.all %}
+                        {% for reply in comment.replies.all %}
+                            <div class="course-comment-card__reply course-comment-card__reply--thread">
+                                <p class="course-comment-card__reply-title">
+                                    Phản hồi từ {{ reply.user.username }} - {{ reply.created_at|date:"d/m/Y H:i" }}
+                                </p>
+                                <p class="course-comment-card__reply-content">{{ reply.content }}</p>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </article>
+            {% empty %}
+                <article class="course-comment-card">
+                    <p class="course-comment-card__content">Chưa có bình luận nào cho khóa học này.</p>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
 </div>
 {% endblock %}
 

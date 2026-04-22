@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from ..models import (
     Course, Quiz, Question, Choice, Lesson, Level, Grade, Subject,
-    Enrollment, UserQuizAttempt, UserAnswer, Notification
+    Enrollment, UserQuizAttempt, UserAnswer, Notification,
+    LessonComment, CourseComment
 )
 from accounts.models import UserProfile
 
@@ -205,3 +206,109 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'user', 'message', 'is_read', 'created_at']
+
+
+# ==================== USER (Simple) ====================
+class UserSimpleSerializer(serializers.ModelSerializer):
+    """Hiển thị thông tin user cơ bản"""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+
+
+# ==================== LESSON COMMENT ====================
+class LessonCommentReplySerializer(serializers.ModelSerializer):
+    """Serializer cho comment trả lời (nested)"""
+    user = UserSimpleSerializer(read_only=True)
+    replies_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = LessonComment
+        fields = ['id', 'user', 'content', 'created_at', 'updated_at', 'replies_count', 'is_root_comment']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_replies_count(self, obj):
+        return obj.replies.count()
+
+
+class LessonCommentSerializer(serializers.ModelSerializer):
+    """Serializer cho comment bài học (gốc)"""
+    user = UserSimpleSerializer(read_only=True)
+    replies = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = LessonComment
+        fields = ['id', 'user', 'content', 'rating', 'created_at', 'updated_at', 'replies', 'is_root_comment']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'parent_comment']
+    
+    def get_replies(self, obj):
+        """Lấy tất cả replies của comment này"""
+        replies = obj.replies.all()
+        serializer = LessonCommentReplySerializer(replies, many=True)
+        return serializer.data
+
+
+class LessonCommentCreateSerializer(serializers.ModelSerializer):
+    """Dùng để tạo comment/reply mới"""
+    class Meta:
+        model = LessonComment
+        fields = ['content', 'rating', 'parent_comment']
+    
+    def create(self, validated_data):
+        parent_comment = validated_data.get('parent_comment')
+
+        
+        if parent_comment and not validated_data.get('rating'):
+            validated_data['rating'] = parent_comment.rating or 5
+
+        validated_data['user'] = self.context['request'].user
+        validated_data['lesson_id'] = self.context['lesson_id']
+        return super().create(validated_data)
+
+
+# ==================== COURSE COMMENT ====================
+class CourseCommentReplySerializer(serializers.ModelSerializer):
+    """Serializer cho comment trả lời (nested)"""
+    user = UserSimpleSerializer(read_only=True)
+    replies_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CourseComment
+        fields = ['id', 'user', 'content', 'created_at', 'updated_at', 'replies_count', 'is_root_comment']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_replies_count(self, obj):
+        return obj.replies.count()
+
+
+class CourseCommentSerializer(serializers.ModelSerializer):
+    """Serializer cho comment khóa học (gốc)"""
+    user = UserSimpleSerializer(read_only=True)
+    replies = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CourseComment
+        fields = ['id', 'user', 'content', 'rating', 'created_at', 'updated_at', 'replies', 'is_root_comment']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'parent_comment']
+    
+    def get_replies(self, obj):
+        """Lấy tất cả replies của comment này"""
+        replies = obj.replies.all()
+        serializer = CourseCommentReplySerializer(replies, many=True)
+        return serializer.data
+
+
+class CourseCommentCreateSerializer(serializers.ModelSerializer):
+    """Dùng để tạo comment/reply mới"""
+    class Meta:
+        model = CourseComment
+        fields = ['content', 'rating', 'parent_comment']
+    
+    def create(self, validated_data):
+        parent_comment = validated_data.get('parent_comment')
+        if parent_comment and not validated_data.get('rating'):
+            validated_data['rating'] = parent_comment.rating or 5
+
+        validated_data['user'] = self.context['request'].user
+        validated_data['course_id'] = self.context['course_id']
+        return super().create(validated_data)

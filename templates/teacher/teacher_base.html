@@ -54,10 +54,10 @@
                             </div>
 
                             {% for noti in notifications %}
-                                <div class="teacher-noti-item">
+                                <a href="{{ noti.reply_url }}" class="teacher-noti-item teacher-noti-item--link">
                                     <div class="teacher-noti-msg">{{ noti.message }}</div>
                                     <div class="teacher-noti-time">{{ noti.created_at|date:"d/m/Y H:i" }}</div>
-                                </div>
+                                </a>
                             {% empty %}
                                 <div class="teacher-noti-item">
                                     <div class="teacher-noti-msg">Không có thông báo</div>
