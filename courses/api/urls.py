@@ -8,6 +8,7 @@ urlpatterns = [
     path('auth/login/', api_views.LoginAPI.as_view(), name='api-login'),
     path('auth/logout/', api_views.LogoutAPI.as_view(), name='api-logout'),
     path('auth/user/', api_views.UserDetailAPI.as_view(), name='api-user-detail'),
+     path('auth/users/', api_views.UserListAPI.as_view(), name='api-user-list'),
     
     # ==================== LEVEL, GRADE, SUBJECT ====================
     path('levels/', api_views.LevelListAPI.as_view(), name='api-level-list'),

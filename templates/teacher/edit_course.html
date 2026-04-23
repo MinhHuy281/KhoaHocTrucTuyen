@@ -65,11 +65,11 @@
 
         <!-- SLIDE -->
         <div class="form-group">
-            <label>Slide bài học đầu tiên (Link Canva)</label>
+            <label>Slide bài học đầu tiên (không bắt buộc)</label>
             <input type="url" name="slide_url" class="form-control"
-                   value="{{ course.lessons.first.slide_url }}"
-                   placeholder="https://www.canva.com/design/.../view">
-            <small>Dán link Canva để học viên xem online hoặc tải từ Canva.</small>
+                   value="{{ course.lessons.first.slide_url|default_if_none:'' }}"
+                   placeholder="https://... (Canva, Google Slides, hoặc link khác)">
+            <small>Không bắt buộc. Có thể để trống nếu chưa có slide.</small>
         </div>
 
         <!-- NỘI DUNG -->

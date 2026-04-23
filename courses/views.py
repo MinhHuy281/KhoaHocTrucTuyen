@@ -1852,15 +1852,31 @@ def teacher_courses(request):
     if not request.user.is_staff:
         return redirect('/')
 
+    q = request.GET.get('q', '').strip()
+
     courses = Course.objects.filter(teacher=request.user).annotate(
+        lessons_count=Count('lessons', distinct=True),
+        students_count=Count('enrollments', filter=Q(enrollments__status='approved'), distinct=True),
+        quizzes_count=Count('quizzes', distinct=True),
         avg_rating=Avg('comments__rating', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False)),
         rating_count=Count('comments', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False), distinct=True),
-    )
-    page_obj, query_string = paginate_request_queryset(request, courses, per_page=8)
+    ).select_related('subject', 'grade', 'level').order_by('-id')
+
+    if q:
+        courses = courses.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(subject__name__icontains=q)
+            | Q(grade__name__icontains=q)
+            | Q(level__name__icontains=q)
+        )
+
+    page_obj, query_string = paginate_request_queryset(request, courses, per_page=6)
 
     return render(request, 'teacher/teacher_courses.html', {
         'courses': page_obj,
         'page_obj': page_obj,
+        'q': q,
         'query_string': query_string,
     })
 

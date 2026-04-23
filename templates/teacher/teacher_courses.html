@@ -5,42 +5,84 @@
 {% block title %}Quản lý khóa học{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'techer.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'techer.css' %}?v=6">
 {% endblock %}
 
 {% block content %}
 
 <div class="teacher-container teacher-courses-page">
-    <div class="teacher-courses-header">
-        <h2 class="teacher-page-title">Khóa học của tôi</h2>
-        <p class="teacher-page-subtitle">Quản lý toàn bộ khóa học bạn đã tạo và xem nhanh thông tin quan trọng.</p>
 
-        <a href="/teacher/create/" class="btn-primary teacher-create-btn">
-            <i class="bi bi-plus-lg"></i>
-            Tạo khóa học
-        </a>
+    <div class="teacher-courses-hero">
+        <div class="teacher-courses-hero-content">
+            <p class="hero-kicker">Teacher Studio</p>
+            <h2 class="teacher-page-title">Khóa học của tôi</h2>
+            <p class="teacher-page-subtitle">Theo dõi nhanh nội dung giảng dạy, tiến độ học viên và hiệu quả từng khóa học trong một màn hình.</p>
+
+            <div class="teacher-top-stats">
+                <div class="teacher-stat-pill">
+                    <span class="teacher-stat-label">Tổng khóa học</span>
+                    <strong>{{ page_obj.paginator.count }}</strong>
+                </div>
+                <div class="teacher-stat-pill">
+                    <span class="teacher-stat-label">Trang hiện tại</span>
+                    <strong>{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</strong>
+                </div>
+                <div class="teacher-stat-pill">
+                    <span class="teacher-stat-label">Hiển thị</span>
+                    <strong>{{ courses|length }} khóa học</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="teacher-courses-hero-actions">
+            <a href="/teacher/create/" class="btn-primary teacher-create-btn">
+                <i class="bi bi-plus-lg"></i>
+                Tạo khóa học
+            </a>
+        </div>
+    </div>
+
+    <form action="" method="get" class="teacher-courses-filter" role="search" aria-label="Tìm khóa học">
+        <div class="teacher-courses-filter-input">
+            <i class="bi bi-search"></i>
+            <input type="text" name="q" placeholder="Tìm theo tên khóa học, môn học, cấp lớp..." value="{{ q }}">
+        </div>
+        <button type="submit" class="btn-primary">Tìm kiếm</button>
+        {% if q %}
+            <a href="/teacher/courses/" class="teacher-clear-filter">Xóa lọc</a>
+        {% endif %}
+    </form>
+
+    <div class="teacher-courses-grid-head">
+        <h3>Danh sách khóa học</h3>
+        {% if q %}
+            <p>Kết quả cho từ khóa: <strong>{{ q }}</strong></p>
+        {% else %}
+            <p>Hiển thị mới nhất trước</p>
+        {% endif %}
     </div>
 
     <div class="course-grid teacher-course-grid">
         {% for course in courses %}
-        
-        <!-- 👉 CLICK NGUYÊN CARD -->
         <a href="{% url 'teacher_course_detail' course.id %}" class="course-link">
-
             <div class="course-card">
-
-                <!-- ẢNH -->
                 <div class="course-thumbnail">
                     {% if course.image %}
-                        <img src="{{ course.image.url }}" alt="{{ course.title }}">
+                        <img src="{{ course.image.url }}" alt="{{ course.title }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image-placeholder" style="display:none;">
+                            <span>Ảnh khóa học không khả dụng</span>
+                        </div>
                     {% else %}
                         <div class="no-image-placeholder">
                             <span>Chưa có ảnh khóa học</span>
                         </div>
                     {% endif %}
+
+                    <span class="course-status {% if course.is_published %}is-published{% else %}is-draft{% endif %}">
+                        {% if course.is_published %}Đã xuất bản{% else %}Bản nháp{% endif %}
+                    </span>
                 </div>
 
-                <!-- BODY -->
                 <div class="course-body">
                     <h3 class="course-title">{{ course.title }}</h3>
 
@@ -51,6 +93,13 @@
                     <div class="course-meta">
                         <span>📘 {{ course.subject }}</span>
                         <span>🎓 {{ course.grade }}</span>
+                        <span>📈 {{ course.level }}</span>
+                    </div>
+
+                    <div class="course-kpis">
+                        <span><i class="bi bi-journal-text"></i> {{ course.lessons_count }} bài học</span>
+                        <span><i class="bi bi-people"></i> {{ course.students_count }} học viên</span>
+                        <span><i class="bi bi-clipboard-check"></i> {{ course.quizzes_count }} quiz</span>
                     </div>
 
                     <div class="course-rating-inline">
@@ -63,30 +112,32 @@
                         {% endif %}
                     </div>
 
-                    <!-- FOOTER -->
                     <div class="course-footer">
-
                         {% if course.is_free %}
                             <span class="price price-free">Miễn phí</span>
                         {% else %}
                             <span class="price">{{ course.price|format_vnd }} VNĐ</span>
-                            
                         {% endif %}
-                        <span class="btn-detail">Xem chi tiết</span>
+
+                        <span class="btn-detail">Quản lý khóa học</span>
                     </div>
                 </div>
-
             </div>
-
         </a>
 
         {% empty %}
             <div class="teacher-empty-state">
-                <h3>Bạn chưa có khóa học nào</h3>
-                <p>Hãy bắt đầu tạo khóa học đầu tiên để chia sẻ kiến thức với học viên.</p>
+                <h3>{% if q %}Không tìm thấy khóa học phù hợp{% else %}Bạn chưa có khóa học nào{% endif %}</h3>
+                <p>
+                    {% if q %}
+                        Hãy thử từ khóa khác hoặc xóa bộ lọc để xem toàn bộ khóa học của bạn.
+                    {% else %}
+                        Hãy bắt đầu tạo khóa học đầu tiên để chia sẻ kiến thức với học viên.
+                    {% endif %}
+                </p>
                 <a href="/teacher/create/" class="btn-primary teacher-create-btn">
                     <i class="bi bi-plus-lg"></i>
-                    Tạo khóa học đầu tiên
+                    {% if q %}Tạo khóa học mới{% else %}Tạo khóa học đầu tiên{% endif %}
                 </a>
             </div>
         {% endfor %}

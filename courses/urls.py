@@ -92,8 +92,8 @@ urlpatterns = [
     path('payment/<int:enrollment_id>/confirm/', views.payment_confirm, name='payment_confirm'),
     path('payment/webhook/', views.payment_webhook, name='payment_webhook'),
 
-    path('mark-notifications-read/', views.mark_notifications_read),
-    path('mark-user-notifications-read/', views.mark_user_notifications_read),
+    path('mark-notifications-read/', views.mark_notifications_read, name='mark_notifications_read'),
+    path('mark-user-notifications-read/', views.mark_user_notifications_read, name='mark_user_notifications_read'),
     
 
 

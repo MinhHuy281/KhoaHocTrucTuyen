@@ -8,7 +8,7 @@
     
     <link rel="stylesheet" href="{% static 'style.css' %}?v=20260407-12">
     <link rel="stylesheet" href="{% static 'base.css' %}?v=20260405-10">
-    <link rel="stylesheet" href="{% static 'teacher_base.css' %}?v=20260405-9">
+    <link rel="stylesheet" href="{% static 'teacher_base.css' %}?v=20260423-21">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     {% block extra_css %}{% endblock %}
@@ -19,25 +19,26 @@
 <!-- NAVBAR -->
 <nav class="navbar app-navbar teacher-navbar">
     <div class="container nav-flex">
-        <a href="/teacher/" class="logo">KhoaHocTrucTuyen</a>
+        <a href="{% url 'teacher_dashboard' %}" class="logo">KhoaHocTrucTuyen</a>
         
         <div class="menu">
-            <a href="/teacher/">Trang chủ</a>
-            <a href="/teacher/courses/">Quản lý khóa học</a>
-            <a href="/teacher/create/">Tạo khóa học</a>
+            <a href="{% url 'teacher_dashboard' %}">Trang chủ</a>
+            <a href="{% url 'teacher_courses' %}">Quản lý khóa học</a>
+            <a href="{% url 'create_courses' %}">Tạo khóa học</a>
             <a href="{% url 'teacher_quiz_results' %}">Quản lý ôn luyện</a>
             <a href="{% url 'teacher_report' %}">Báo cáo</a>
             <a href="{% url 'teacher_students' %}">Học viên</a> 
         </div>
 
-        <form action="/teacher/courses/" method="GET" class="search-box">
-            <input type="text" name="q" placeholder="Tìm khóa học của bạn...">
-            <button type="submit">🔍</button>
-        </form>
+        <div class="teacher-navbar-actions">
+            <form action="{% url 'teacher_courses' %}" method="GET" class="search-box">
+                <input type="text" name="q" placeholder="Tìm khóa học của bạn...">
+                <button type="submit">🔍</button>
+            </form>
 
-        <div class="auth">
-            {% if current_teacher %}
-                <div class="user-box">
+            <div class="auth">
+                {% if current_teacher %}
+                    <div class="user-box">
 
                     <!-- 🔔 NOTIFICATION -->
                     <div class="teacher-noti" id="teacherNotiBox">
@@ -109,11 +110,12 @@
                             </div>
                         </details>
                     </div>
-                </div>
-            {% else %}
-                <a href="{% url 'teacher_login' %}" class="login-btn">Đăng nhập</a>
-                <a href="{% url 'teacher_register' %}" class="register-btn">Đăng ký</a>
-            {% endif %}
+                    </div>
+                {% else %}
+                    <a href="{% url 'teacher_login' %}" class="login-btn">Đăng nhập</a>
+                    <a href="{% url 'teacher_register' %}" class="register-btn">Đăng ký</a>
+                {% endif %}
+            </div>
         </div>
     </div>
 </nav>
@@ -177,7 +179,7 @@ function markNotiRead(event) {
         event.stopPropagation();
     }
 
-    return fetch("/mark-notifications-read/", {
+    return fetch("{% url 'mark_notifications_read' %}", {
         method: "POST",
         headers: {
             "X-CSRFToken": getCookie("csrftoken"),
