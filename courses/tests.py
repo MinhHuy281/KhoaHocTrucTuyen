@@ -1,6 +1,8 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
 
@@ -9,8 +11,70 @@ from accounts.auth import SeparateSessionAuth
 
 from .models import (
     Course, Level, Grade, Subject, Quiz, Question, Choice,
-    Enrollment, UserQuizAttempt, Lesson
+    Enrollment, UserQuizAttempt, Lesson, Notification
 )
+
+
+class TeacherDailyReportTestCase(TestCase):
+
+    def setUp(self):
+        self.level = Level.objects.create(name='Cấp 1')
+        self.grade = Grade.objects.create(name='Lớp 1', level=self.level)
+        self.subject = Subject.objects.create(name='Toán')
+        self.teacher = User.objects.create_user(username='teacher1', password='123456', is_staff=True)
+        self.student = User.objects.create_user(username='student1', password='123456')
+        self.course = Course.objects.create(
+            title='Khóa học toán',
+            price=100000,
+            is_free=False,
+            level=self.level,
+            grade=self.grade,
+            subject=self.subject,
+            teacher=self.teacher,
+            is_published=True,
+        )
+        self.other_course = Course.objects.create(
+            title='Khóa học văn',
+            price=80000,
+            is_free=False,
+            level=self.level,
+            grade=self.grade,
+            subject=self.subject,
+            teacher=self.teacher,
+            is_published=True,
+        )
+
+        today_enrollment = Enrollment.objects.create(user=self.student, course=self.course)
+        today_enrollment.approve()
+
+        yesterday_enrollment = Enrollment.objects.create(user=self.student, course=self.other_course)
+        yesterday = timezone.now() - timedelta(days=1)
+        Enrollment.objects.filter(id=yesterday_enrollment.id).update(
+            created=yesterday,
+            paid_at=yesterday,
+            status='approved',
+            is_paid=True,
+        )
+
+        self.client = Client()
+        session = self.client.session
+        session['_teacher_auth_id'] = self.teacher.id
+        session.save()
+
+    def test_teacher_report_page_shows_report_data(self):
+        response = self.client.get(reverse('teacher_report'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Báo cáo ngày')
+        self.assertContains(response, 'Khóa học toán')
+        self.assertContains(response, 'Đăng ký trong ngày')
+        self.assertContains(response, '100.000 VNĐ')
+
+    def test_teacher_dashboard_no_longer_shows_report_block(self):
+        response = self.client.get(reverse('teacher_dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Báo cáo ngày')
 
 class QuizTestCase(TestCase):
 
@@ -114,6 +178,53 @@ class QuizTestCase(TestCase):
         self.assertEqual(attempt.score, 0)
         self.assertEqual(attempt.correct_answers, 0)
         self.assertEqual(attempt.percentage, 0.0)
+
+
+class PaymentNotificationTestCase(TestCase):
+
+    def setUp(self):
+        self.level = Level.objects.create(name='Cấp 2')
+        self.grade = Grade.objects.create(name='Lớp 6', level=self.level)
+        self.subject = Subject.objects.create(name='Vật lý')
+
+        self.teacher = User.objects.create_user(username='teacher_pay', password='123456', is_staff=True)
+        self.student = User.objects.create_user(username='student_pay', password='123456')
+        self.admin = User.objects.create_superuser(username='admin_pay', email='admin@example.com', password='123456')
+
+        self.course = Course.objects.create(
+            title='Khóa học vật lý',
+            price=100000,
+            is_free=False,
+            level=self.level,
+            grade=self.grade,
+            subject=self.subject,
+            teacher=self.teacher,
+            is_published=True,
+        )
+
+        self.enrollment = Enrollment.objects.create(user=self.student, course=self.course)
+
+        self.client = Client()
+        session = self.client.session
+        session[SeparateSessionAuth.USER_SESSION_KEY] = self.student.id
+        session.save()
+
+    def test_payment_confirm_notifies_teacher_and_admin_share(self):
+        response = self.client.post(reverse('payment_confirm', args=[self.enrollment.id]))
+
+        self.assertEqual(response.status_code, 200)
+
+        teacher_notifications = Notification.objects.filter(
+            user=self.teacher,
+            message__icontains='Admin nhận 10000 VNĐ',
+        )
+        admin_notifications = Notification.objects.filter(
+            user=self.admin,
+            message__icontains='Đã nhận 10000 VNĐ (10%)',
+        )
+
+        self.assertEqual(teacher_notifications.count(), 1)
+        self.assertEqual(admin_notifications.count(), 1)
 
 
 class APITestCaseBase(APITestCase):

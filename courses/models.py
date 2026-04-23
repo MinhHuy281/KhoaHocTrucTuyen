@@ -126,6 +126,7 @@ class Enrollment(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
 
     created = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
 
     is_paid = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -137,6 +138,8 @@ class Enrollment(models.Model):
     def approve(self):
         self.is_paid = True
         self.status = 'approved'
+        if not self.paid_at:
+            self.paid_at = timezone.now()
         self.save()
 
     # ✅ CHECK QUYỀN HỌC

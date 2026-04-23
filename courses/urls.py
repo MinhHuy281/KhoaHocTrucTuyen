@@ -46,6 +46,7 @@ urlpatterns = [
 
     # ================= TEACHER =================
     path('teacher/', views.teacher_dashboard, name='teacher_dashboard'),
+    path('teacher/report/', views.teacher_report, name='teacher_report'),
 
     path('teacher/profile/', views.teacher_profile, name='teacher_profile'),
 
@@ -87,6 +88,9 @@ urlpatterns = [
 
 
     path('payment/<int:enrollment_id>/', views.payment, name='payment'),
+    path('payment/<int:enrollment_id>/status/', views.payment_status, name='payment_status'),
+    path('payment/<int:enrollment_id>/confirm/', views.payment_confirm, name='payment_confirm'),
+    path('payment/webhook/', views.payment_webhook, name='payment_webhook'),
 
     path('mark-notifications-read/', views.mark_notifications_read),
     path('mark-user-notifications-read/', views.mark_user_notifications_read),

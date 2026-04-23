@@ -23,21 +23,157 @@
 
     <!-- QR DUY NHẤT -->
     <div class="qr-box">
-        <p><strong>Quét mã để thanh toán</strong></p>
+        <p><strong>Quét mã để chuyển tiền đến</strong></p>
+        <p style="margin-bottom:8px;font-size:22px;font-weight:800;letter-spacing:0.2px;">
+            NGUYEN HUU LIEN
+        </p>
 
-        <img src="https://img.vietqr.io/image/MB-123456789-compact.png?amount={{ enrollment.course.price }}&addInfo=ThanhToan_{{ enrollment.user.username }}_{{ enrollment.course.id }}&accountName=NGUYEN%20VAN%20A">
+        <img src="https://img.vietqr.io/image/MB-0329505455-compact2.png?amount={{ enrollment.course.price }}&addInfo={{ payment_reference }}&accountName=NGUYEN%20HUU%20LIEN">
         
         <p style="margin-top:10px;color:#64748b;font-size:14px;">
-            Nội dung: ThanhToan_{{ enrollment.user.username }}_{{ enrollment.course.id }}
+            Nội dung: {{ payment_reference }}
+        </p>
+        <p style="margin-top:10px;color:#64748b;font-size:14px;">
+            Sau khi thanh toán được hệ thống xác nhận, trang sẽ tự chuyển sang bài học đầu tiên.
         </p>
     </div>
 
-    <form method="POST">
-        {% csrf_token %}
-        <button type="submit" class="btn-submit">
-            ✅ Tôi đã thanh toán
-        </button>
-    </form>
+    <div id="payment-status" style="margin-top:16px;color:#0f172a;font-weight:600;text-align:center;">
+        Đang chờ xác nhận thanh toán...
+    </div>
+
+    <button type="button" id="confirm-payment-btn" class="btn-submit" style="margin-top:16px;">
+        ✅ Tôi đã thanh toán
+    </button>
+
+    <script>
+        (function () {
+            const statusUrl = "{% url 'payment_status' enrollment.id %}";
+            const confirmUrl = "{% url 'payment_confirm' enrollment.id %}";
+            const fallbackUrl = "{{ success_url|escapejs }}";
+            const statusBox = document.getElementById('payment-status');
+            const confirmBtn = document.getElementById('confirm-payment-btn');
+            let isRedirecting = false;
+            let isConfirming = false;
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            async function confirmPayment() {
+                if (isRedirecting || isConfirming) {
+                    return;
+                }
+
+                isConfirming = true;
+                if (statusBox) {
+                    statusBox.textContent = 'Đang xác nhận thanh toán...';
+                }
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                    confirmBtn.textContent = '⏳ Đang xác nhận...';
+                }
+
+                try {
+                    const response = await fetch(confirmUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    });
+
+                    if (!response.ok) {
+                        if (statusBox) {
+                            statusBox.textContent = 'Xác nhận thất bại, vui lòng thử lại.';
+                        }
+                        if (confirmBtn) {
+                            confirmBtn.disabled = false;
+                            confirmBtn.textContent = '✅ Tôi đã thanh toán';
+                        }
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        isRedirecting = true;
+                        if (statusBox) {
+                            statusBox.textContent = 'Thanh toán đã được xác nhận. Đang mở bài học...';
+                        }
+                        window.location.href = data.redirect_url || fallbackUrl;
+                        return;
+                    }
+
+                    if (statusBox) {
+                        statusBox.textContent = 'Xác nhận thất bại, vui lòng thử lại.';
+                    }
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = '✅ Tôi đã thanh toán';
+                    }
+                } catch (error) {
+                    console.warn('Manual confirmation failed:', error);
+                    if (statusBox) {
+                        statusBox.textContent = 'Không thể kết nối máy chủ, vui lòng thử lại.';
+                    }
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = '✅ Tôi đã thanh toán';
+                    }
+                } finally {
+                    isConfirming = false;
+                }
+            }
+
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', confirmPayment);
+            }
+
+            async function checkPaymentStatus() {
+                if (isRedirecting) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(statusUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const data = await response.json();
+
+                    if (data.status === 'approved' || data.is_paid) {
+                        isRedirecting = true;
+                        if (statusBox) {
+                            statusBox.textContent = 'Thanh toán đã được xác nhận. Đang mở bài học...';
+                        }
+                        window.location.href = data.redirect_url || fallbackUrl;
+                    }
+                } catch (error) {
+                    console.warn('Payment status check failed:', error);
+                }
+            }
+
+            checkPaymentStatus();
+            setInterval(checkPaymentStatus, 3000);
+        })();
+    </script>
 
 </div>
 

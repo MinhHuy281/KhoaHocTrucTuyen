@@ -193,15 +193,20 @@ function markUserNotiRead(event) {
         event.stopPropagation();
     }
 
-    fetch("/mark-user-notifications-read/", {
+    return fetch("/mark-user-notifications-read/", {
         method: "POST",
         headers: {
             "X-CSRFToken": getCookie("csrftoken"),
             "Content-Type": "application/json"
         }
-    }).then(() => {
-        location.reload();
     });
+}
+
+function clearUserNotiBadge() {
+    const badge = document.querySelector('#userNotiBtn .noti-badge');
+    if (badge) {
+        badge.remove();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -212,11 +217,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const userNotiBox = document.getElementById('userNotiBox');
     const userNotiBtn = document.getElementById('userNotiBtn');
+    let userNotiMarked = false;
     if (userNotiBox && userNotiBtn) {
         userNotiBtn.addEventListener('click', function (event) {
             event.preventDefault();
             event.stopPropagation();
+
+            const willOpen = !userNotiBox.classList.contains('is-open');
             userNotiBox.classList.toggle('is-open');
+
+            if (willOpen && !userNotiMarked) {
+                userNotiMarked = true;
+                clearUserNotiBadge();
+                markUserNotiRead().catch(() => {
+                    userNotiMarked = false;
+                });
+            }
         });
 
         document.addEventListener('click', function (event) {

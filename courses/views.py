@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.utils.html import escape
+from django.urls import reverse
+from django.conf import settings
 from django.core.paginator import Paginator
 from django.db import connection
 from django.db.models import Q, Count, Prefetch, Avg
@@ -13,8 +15,11 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import OperationalError, ProgrammingError, DatabaseError
 from django.middleware.csrf import get_token
+from django.views.decorators.csrf import csrf_exempt
 import json
 import re
+from datetime import datetime, time, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from urllib.parse import urlencode, parse_qs, urlparse
 from urllib.request import Request, urlopen
 
@@ -31,6 +36,120 @@ from accounts.decorators import teacher_required, student_required
 
 
 COMMENT_META_TAG = "[[COMMENT_META]]"
+
+
+def get_payment_success_url(enrollment):
+    first_lesson = enrollment.course.lessons.order_by('order', 'id').first()
+    if first_lesson:
+        return reverse('lesson_view', args=[first_lesson.id])
+
+    return reverse('course_detail', args=[enrollment.course.id])
+
+
+def get_payment_reference(enrollment):
+    # Unique transfer reference embedded into QR content.
+    return f"PAYE{enrollment.id}"
+
+
+def _create_payment_notification(enrollment):
+    course_price = Decimal(str(enrollment.course.price or 0))
+    admin_share = (course_price * Decimal('0.10')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    teacher_share = course_price - admin_share
+
+    teacher = enrollment.course.teacher
+    if teacher and teacher != enrollment.user:
+        Notification.objects.create(
+            user=teacher,
+            message=(
+                f"Học viên {enrollment.user.username} đã thanh toán {course_price} VNĐ cho khóa học "
+                f"'{enrollment.course.title}'. Admin nhận {admin_share} VNĐ (10%), "
+                f"giảng viên nhận {teacher_share} VNĐ."
+            )
+        )
+
+    admin_users = User.objects.filter(is_superuser=True, is_active=True)
+    for admin_user in admin_users:
+        Notification.objects.create(
+            user=admin_user,
+            message=(
+                f"Đã nhận {admin_share} VNĐ (10%) từ khóa học '{enrollment.course.title}' "
+                f"sau thanh toán của học viên {enrollment.user.username}."
+            )
+        )
+
+
+def _extract_transfer_content(payload):
+    if not isinstance(payload, dict):
+        return ""
+
+    transfer_data = payload.get('data') if isinstance(payload.get('data'), dict) else {}
+    candidates = [
+        payload.get('content'),
+        payload.get('description'),
+        payload.get('transferContent'),
+        payload.get('transactionContent'),
+        payload.get('addInfo'),
+        transfer_data.get('content'),
+        transfer_data.get('description'),
+        transfer_data.get('transferContent'),
+        transfer_data.get('transactionContent'),
+        transfer_data.get('addInfo'),
+    ]
+
+    for value in candidates:
+        if value:
+            return str(value)
+    return ""
+
+
+def _extract_transfer_amount(payload):
+    if not isinstance(payload, dict):
+        return None
+
+    transfer_data = payload.get('data') if isinstance(payload.get('data'), dict) else {}
+    candidates = [
+        payload.get('amount'),
+        payload.get('transferAmount'),
+        payload.get('creditAmount'),
+        transfer_data.get('amount'),
+        transfer_data.get('transferAmount'),
+        transfer_data.get('creditAmount'),
+    ]
+
+    for value in candidates:
+        if value in (None, ""):
+            continue
+
+        raw_value = str(value).replace(',', '').strip()
+        try:
+            return Decimal(raw_value)
+        except (InvalidOperation, ValueError):
+            continue
+
+    return None
+
+
+def _find_enrollment_from_transfer_content(transfer_content):
+    if not transfer_content:
+        return None
+
+    ref_match = re.search(r'PAYE(\d+)', transfer_content, flags=re.IGNORECASE)
+    if ref_match:
+        return Enrollment.objects.filter(id=int(ref_match.group(1))).select_related('course', 'user').first()
+
+    legacy_match = re.search(r'ThanhToan_(.+)_(\d+)', transfer_content, flags=re.IGNORECASE)
+    if legacy_match:
+        username = legacy_match.group(1)
+        course_id = int(legacy_match.group(2))
+        return (
+            Enrollment.objects
+            .filter(user__username=username, course_id=course_id)
+            .order_by('-created')
+            .select_related('course', 'user')
+            .first()
+        )
+
+    return None
 
 
 def append_reply_history(existing_reply, new_reply, replied_at):
@@ -1280,6 +1399,11 @@ def user_profile(request):
         if email and User.objects.filter(email=email).exclude(id=user.id).exists():
             messages.error(request, '❌ Email này đã được dùng bởi tài khoản khác.')
             return redirect('user_profile')
+        
+        # ✅ Kiểm tra số điện thoại (nếu có)
+        if phone and (not phone.isdigit() or len(phone) < 9 or len(phone) > 15):
+            messages.error(request, '❌ Số điện thoại không hợp lệ. Vui lòng nhập 9-15 chữ số!')
+            return redirect('user_profile')
 
         user.first_name = first_name
         user.last_name = last_name
@@ -1452,15 +1576,102 @@ def take_quiz(request, attempt_id):
     })
 # ================= TEACHER =================
 
+def build_teacher_daily_report_context(request, teacher):
+    raw_report_date = (request.GET.get('report_date') or '').strip()
+
+    if raw_report_date:
+        try:
+            report_date = datetime.strptime(raw_report_date, '%Y-%m-%d').date()
+            has_invalid_report_date = False
+        except ValueError:
+            report_date = timezone.localdate()
+            has_invalid_report_date = True
+    else:
+        report_date = timezone.localdate()
+        has_invalid_report_date = False
+
+    if has_invalid_report_date:
+        messages.warning(request, 'Ngày báo cáo không hợp lệ, đã chuyển về ngày hiện tại.')
+
+    day_start = timezone.make_aware(datetime.combine(report_date, time.min))
+    day_end = day_start + timedelta(days=1)
+
+    daily_registered_enrollments = Enrollment.objects.filter(
+        course__teacher=teacher,
+        created__gte=day_start,
+        created__lt=day_end,
+    ).select_related('course')
+
+    daily_paid_enrollments = Enrollment.objects.filter(
+        course__teacher=teacher,
+        status='approved',
+    ).filter(
+        Q(paid_at__gte=day_start, paid_at__lt=day_end)
+        | (Q(paid_at__isnull=True) & Q(created__gte=day_start) & Q(created__lt=day_end))
+    ).select_related('course')
+
+    daily_report_map = {}
+    for enrollment in daily_registered_enrollments:
+        report_row = daily_report_map.setdefault(enrollment.course_id, {
+            'course': enrollment.course,
+            'registered_count': 0,
+            'paid_count': 0,
+            'revenue': Decimal('0'),
+        })
+        report_row['registered_count'] += 1
+
+    for enrollment in daily_paid_enrollments:
+        report_row = daily_report_map.setdefault(enrollment.course_id, {
+            'course': enrollment.course,
+            'registered_count': 0,
+            'paid_count': 0,
+            'revenue': Decimal('0'),
+        })
+        report_row['paid_count'] += 1
+        report_row['revenue'] += Decimal(str(enrollment.course.price or 0))
+
+    daily_report_rows = []
+    for course in Course.objects.filter(teacher=teacher).only('id', 'title', 'price').order_by('-id'):
+        report_row = daily_report_map.get(course.id)
+        if not report_row:
+            continue
+
+        revenue = report_row['revenue']
+        admin_share = (revenue * Decimal('0.10')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+        daily_report_rows.append({
+            'course': course,
+            'registered_count': report_row['registered_count'],
+            'paid_count': report_row['paid_count'],
+            'revenue': revenue,
+            'admin_share': admin_share,
+        })
+
+    daily_registered_total = sum(row['registered_count'] for row in daily_report_rows)
+    daily_paid_total = sum(row['paid_count'] for row in daily_report_rows)
+    daily_revenue_total = sum((row['revenue'] for row in daily_report_rows), Decimal('0'))
+    daily_admin_share_total = sum((row['admin_share'] for row in daily_report_rows), Decimal('0'))
+
+    return {
+        'daily_report_date': report_date,
+        'daily_report_date_value': report_date.strftime('%Y-%m-%d'),
+        'daily_report_rows': daily_report_rows,
+        'daily_registered_total': daily_registered_total,
+        'daily_paid_total': daily_paid_total,
+        'daily_revenue_total': daily_revenue_total,
+        'daily_admin_share_total': daily_admin_share_total,
+    }
+
 @teacher_required
 def teacher_dashboard(request):
     if not request.user.is_staff:
         return redirect('/')
 
-    courses = Course.objects.filter(teacher=request.user).annotate(
+    teacher = request.user
+    courses = Course.objects.filter(teacher=teacher).annotate(
         avg_rating=Avg('comments__rating', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False)),
         rating_count=Count('comments', filter=Q(comments__parent_comment__isnull=True, comments__rating__isnull=False), distinct=True),
     )
+
     course_page_obj, course_query_string = paginate_request_queryset(
         request,
         courses,
@@ -1473,6 +1684,15 @@ def teacher_dashboard(request):
         'course_page_obj': course_page_obj,
         'course_query_string': course_query_string,
     })
+
+
+@teacher_required
+def teacher_report(request):
+    if not request.user.is_staff:
+        return redirect('/')
+
+    report_context = build_teacher_daily_report_context(request, request.user)
+    return render(request, 'teacher/report.html', report_context)
 
 
 @teacher_required
@@ -1572,6 +1792,11 @@ def teacher_profile(request):
 
         if email and User.objects.filter(email=email).exclude(id=teacher.id).exists():
             messages.error(request, '❌ Email này đã được dùng bởi tài khoản khác.')
+            return redirect('teacher_profile')
+        
+        # ✅ Kiểm tra số điện thoại (nếu có)
+        if phone and (not phone.isdigit() or len(phone) < 9 or len(phone) > 15):
+            messages.error(request, '❌ Số điện thoại không hợp lệ. Vui lòng nhập 9-15 chữ số!')
             return redirect('teacher_profile')
 
         teacher.first_name = first_name
@@ -2311,34 +2536,94 @@ def create_quiz(request, id):
 @student_required
 def payment(request, enrollment_id):
     enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user)
+    success_url = get_payment_success_url(enrollment)
+    payment_reference = get_payment_reference(enrollment)
+
+    if enrollment.status == 'approved' or enrollment.is_paid:
+        return redirect(success_url)
 
     if request.method == "POST":
-        enrollment.is_paid = True
-        enrollment.status = 'approved'
-        enrollment.save()
-
-        # ===== NOTIFICATION USER =====
-        # Notification.objects.create(
-        #     user=request.user,
-        #     message=f"Bạn đã thanh toán thành công khóa học '{enrollment.course.title}'"
-        # )
-
-        # ===== NOTIFICATION TEACHER (FIX CHUẨN) =====
-        teacher = enrollment.course.teacher
-
-        if teacher and teacher != request.user:
-            Notification.objects.create(
-                user=teacher,
-                message=f" Học viên {request.user.username} đã thanh toán {enrollment.course.price} VNĐ cho khóa học '{enrollment.course.title}'"
-            )
+        if enrollment.status != 'approved':
+            enrollment.approve()
+            _create_payment_notification(enrollment)
 
         messages.success(request, "Thanh toán thành công!")
-        return redirect('course_detail', course_id=enrollment.course.id)
+        return redirect(success_url)
 
     return render(request, 'payment.html', {
-        'enrollment': enrollment
+        'enrollment': enrollment,
+        'success_url': success_url,
+        'payment_reference': payment_reference,
     })
 
+
+@student_required
+def payment_status(request, enrollment_id):
+    enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user)
+    success_url = get_payment_success_url(enrollment)
+
+    return JsonResponse({
+        'status': enrollment.status,
+        'is_paid': enrollment.is_paid,
+        'redirect_url': success_url if (enrollment.status == 'approved' or enrollment.is_paid) else None,
+    })
+
+
+@csrf_exempt
+def payment_webhook(request):
+    """Receive payment notifications from bank gateway and auto-approve enrollment."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+    webhook_secret = (getattr(settings, 'PAYMENT_WEBHOOK_SECRET', '') or '').strip()
+    provided_secret = (request.headers.get('X-Webhook-Secret') or request.headers.get('x-webhook-secret') or '').strip()
+
+    if webhook_secret and provided_secret != webhook_secret:
+        return JsonResponse({'status': 'error', 'message': 'Invalid webhook secret'}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON payload'}, status=400)
+
+    transfer_content = _extract_transfer_content(payload)
+    if not transfer_content:
+        return JsonResponse({'status': 'ignored', 'message': 'Transfer content not found'}, status=200)
+
+    enrollment = _find_enrollment_from_transfer_content(transfer_content)
+    if not enrollment:
+        return JsonResponse({'status': 'ignored', 'message': 'No matching enrollment'}, status=200)
+
+    transfer_amount = _extract_transfer_amount(payload)
+    course_price = Decimal(str(enrollment.course.price or 0))
+    if transfer_amount is not None and transfer_amount < course_price:
+        return JsonResponse({'status': 'ignored', 'message': 'Transferred amount is less than course price'}, status=200)
+
+    if enrollment.status != 'approved':
+        enrollment.approve()
+        _create_payment_notification(enrollment)
+
+    return JsonResponse({'status': 'success', 'message': 'Payment confirmed', 'enrollment_id': enrollment.id})
+
+
+@student_required
+def payment_confirm(request, enrollment_id):
+    """Xác nhận thanh toán và cập nhật trạng thái enrollment"""
+    enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user)
+    
+    if request.method == "POST":
+        if enrollment.status != 'approved':
+            enrollment.approve()
+            _create_payment_notification(enrollment)
+        
+        success_url = get_payment_success_url(enrollment)
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Thanh toán đã được xác nhận',
+            'redirect_url': success_url,
+        })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
 
 @student_required
@@ -2350,6 +2635,20 @@ def enroll_course(request, course_id):
         course=course
     )
 
+    # ===== LẤY THÔNG TIN NGƯỜI DÙNG TỰ ĐỘNG =====
+    user = request.user
+    full_name = f"{user.first_name} {user.last_name}".strip() or user.username
+    email = user.email or ""
+    
+    # Lấy số điện thoại từ UserProfile nếu có
+    phone = ""
+    try:
+        user_profile = getattr(user, 'profile', None)
+        if user_profile:
+            phone = user_profile.phone or ""
+    except Exception:
+        pass
+
     if request.method == "POST":
         full_name = request.POST.get("full_name")
         email = request.POST.get("email")
@@ -2360,7 +2659,20 @@ def enroll_course(request, course_id):
         if not full_name or not email or not phone or not payment_method:
             return render(request, 'enroll_confirm.html', {
                 'enrollment': enrollment,
-                'error': 'Vui lòng nhập đầy đủ thông tin!'
+                'error': 'Vui lòng nhập đầy đủ thông tin!',
+                'full_name': full_name,
+                'email': email,
+                'phone': phone,
+            })
+        
+        # ✅ Kiểm tra số điện thoại chỉ chứa số
+        if not phone.isdigit() or len(phone) < 9 or len(phone) > 15:
+            return render(request, 'enroll_confirm.html', {
+                'enrollment': enrollment,
+                'error': 'Số điện thoại không hợp lệ. Vui lòng nhập 9-15 chữ số!',
+                'full_name': full_name,
+                'email': email,
+                'phone': phone,
             })
 
         # 👉 redirect qua payment sau khi nhập xong (khóa học có phí)
@@ -2375,7 +2687,10 @@ def enroll_course(request, course_id):
         return redirect('course_detail', course_id=course.id)
 
     return render(request, 'enroll_confirm.html', {
-        'enrollment': enrollment
+        'enrollment': enrollment,
+        'full_name': full_name,
+        'email': email,
+        'phone': phone,
     })
 
 

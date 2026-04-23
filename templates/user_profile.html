@@ -49,8 +49,11 @@
                     </div>
 
                     <div class="profile-field full">
-                        <label>Số điện thoại</label>
-                        <input type="text" name="phone" value="{{ profile.phone|default:'' }}">
+                        <label>Số điện thoại (chỉ số)</label>
+                        <input type="tel" name="phone" value="{{ profile.phone|default:'' }}"
+                               pattern="[0-9]{9,15}" inputmode="numeric"
+                               title="Chỉ nhập các chữ số (9-15 chữ số)"
+                               placeholder="Nhập 9-15 chữ số">
                     </div>
 
                     <div class="profile-field full">
@@ -142,4 +145,68 @@
         </section>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const phoneInput = document.querySelector('input[name="phone"]');
+        if (!phoneInput) {
+            return;
+        }
+
+        const allowControlKey = function(event) {
+            return (
+                event.ctrlKey ||
+                event.metaKey ||
+                [
+                    'Backspace',
+                    'Delete',
+                    'Tab',
+                    'Enter',
+                    'ArrowLeft',
+                    'ArrowRight',
+                    'ArrowUp',
+                    'ArrowDown',
+                    'Home',
+                    'End'
+                ].includes(event.key)
+            );
+        };
+
+        phoneInput.addEventListener('keydown', function(event) {
+            if (allowControlKey(event)) {
+                return;
+            }
+            if (!/^\d$/.test(event.key)) {
+                event.preventDefault();
+            }
+        });
+
+        phoneInput.addEventListener('beforeinput', function(event) {
+            if (!event.data) {
+                return;
+            }
+            if (!/^\d+$/.test(event.data)) {
+                event.preventDefault();
+            }
+        });
+
+        phoneInput.addEventListener('paste', function(event) {
+            event.preventDefault();
+            const text = (event.clipboardData || window.clipboardData).getData('text');
+            const numbersOnly = text.replace(/\D/g, '');
+
+            if (!numbersOnly) {
+                return;
+            }
+
+            const start = this.selectionStart ?? this.value.length;
+            const end = this.selectionEnd ?? this.value.length;
+            this.value = this.value.slice(0, start) + numbersOnly + this.value.slice(end);
+            const cursorPos = start + numbersOnly.length;
+            this.setSelectionRange(cursorPos, cursorPos);
+            this.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+</script>
+
 {% endblock %}
