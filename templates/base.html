@@ -18,11 +18,11 @@
 <!-- NAVBAR -->
 <nav class="navbar app-navbar">
     <div class="container nav-flex">
-        <a href="/" class="logo">KhoaHocTrucTuyen</a>
+        <a href="{% url 'index' %}" class="logo">KhoaHocTrucTuyen</a>
         
         <div class="menu">
-            <a href="/">Trang chủ</a>
-            <a href="/courses/" class="dropdown">Khóa học</a>
+            <a href="{% url 'index' %}">Trang chủ</a>
+            <a href="{% url 'courses' %}" class="dropdown">Khóa học</a>
             {% if current_user %}
                 <a href="{% url 'quiz_list_all' %}" class="menu-item">Ôn Luyện</a>
             {% else %}
@@ -32,7 +32,7 @@
             <a href="#">Liên hệ</a>
         </div>
 
-        <form action="/courses/" method="GET" class="search-box">
+        <form action="{% url 'courses' %}" method="GET" class="search-box">
             <input type="text" name="q" placeholder="Tìm khóa học..." value="{{q}}">
             <button type="submit">🔍</button>
         </form>
@@ -193,7 +193,7 @@ function markUserNotiRead(event) {
         event.stopPropagation();
     }
 
-    return fetch("/mark-user-notifications-read/", {
+    return fetch("{% url 'mark_user_notifications_read' %}", {
         method: "POST",
         headers: {
             "X-CSRFToken": getCookie("csrftoken"),

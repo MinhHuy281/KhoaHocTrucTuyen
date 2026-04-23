@@ -117,11 +117,32 @@ def main() -> int:
             data = response.text
         return response.status_code, data
 
+    checks: list[tuple[str, int, bool]] = []
+
+    def record_check(name: str, status_code: int, ok_codes: set[int]) -> None:
+        checks.append((name, status_code, status_code in ok_codes))
+
     status_code, courses_payload = scoped_request("GET", "/courses/")
     if isinstance(courses_payload, dict) and courses_payload.get("error") in {"connection_error", "timeout"}:
         return 1
+    record_check("GET /courses/", status_code, {200})
     print(f"[GET] /courses/ -> {status_code}")
     print(pretty(courses_payload))
+
+    levels_status, levels_payload = scoped_request("GET", "/levels/")
+    record_check("GET /levels/", levels_status, {200})
+    print(f"[GET] /levels/ -> {levels_status}")
+    print(pretty(levels_payload))
+
+    grades_status, grades_payload = scoped_request("GET", "/grades/")
+    record_check("GET /grades/", grades_status, {200})
+    print(f"[GET] /grades/ -> {grades_status}")
+    print(pretty(grades_payload))
+
+    subjects_status, subjects_payload = scoped_request("GET", "/subjects/")
+    record_check("GET /subjects/", subjects_status, {200})
+    print(f"[GET] /subjects/ -> {subjects_status}")
+    print(pretty(subjects_payload))
 
     courses = extract_results(courses_payload)
     chosen_course = {"id": args.course_id} if args.course_id is not None else (courses[0] if courses else None)
@@ -148,10 +169,12 @@ def main() -> int:
         )
 
     register_status, register_payload = scoped_register_user(args.username, args.password, args.role)
+    record_check("POST /auth/register/", register_status, {201})
     print(f"[POST] /auth/register/ -> {register_status}")
     print(pretty(register_payload))
 
     login_status, login_payload = scoped_login_user(args.username, args.password)
+    record_check("POST /auth/login/", login_status, {200})
     print(f"[POST] /auth/login/ -> {login_status}")
     print(pretty(login_payload))
 
@@ -161,16 +184,50 @@ def main() -> int:
         return 1
 
     user_status, user_payload = scoped_request("GET", "/auth/user/", token=token)
+    record_check("GET /auth/user/", user_status, {200})
     print(f"[GET] /auth/user/ -> {user_status}")
     print(pretty(user_payload))
+
+    enrollments_status, enrollments_payload = scoped_request("GET", "/enrollments/", token=token)
+    record_check("GET /enrollments/", enrollments_status, {200})
+    print(f"[GET] /enrollments/ -> {enrollments_status}")
+    print(pretty(enrollments_payload))
+
+    attempts_status, attempts_payload = scoped_request("GET", "/my-attempts/", token=token)
+    record_check("GET /my-attempts/", attempts_status, {200})
+    print(f"[GET] /my-attempts/ -> {attempts_status}")
+    print(pretty(attempts_payload))
+
+    notifications_status, notifications_payload = scoped_request("GET", "/notifications/", token=token)
+    record_check("GET /notifications/", notifications_status, {200})
+    print(f"[GET] /notifications/ -> {notifications_status}")
+    print(pretty(notifications_payload))
+
+    if args.role == "teacher":
+        my_courses_status, my_courses_payload = scoped_request("GET", "/my-courses/", token=token)
+        record_check("GET /my-courses/", my_courses_status, {200})
+        print(f"[GET] /my-courses/ -> {my_courses_status}")
+        print(pretty(my_courses_payload))
+
+        teacher_enrollments_status, teacher_enrollments_payload = scoped_request("GET", "/teacher/enrollments/", token=token)
+        record_check("GET /teacher/enrollments/", teacher_enrollments_status, {200})
+        print(f"[GET] /teacher/enrollments/ -> {teacher_enrollments_status}")
+        print(pretty(teacher_enrollments_payload))
+
+        teacher_quiz_results_status, teacher_quiz_results_payload = scoped_request("GET", "/teacher/quiz-results/", token=token)
+        record_check("GET /teacher/quiz-results/", teacher_quiz_results_status, {200})
+        print(f"[GET] /teacher/quiz-results/ -> {teacher_quiz_results_status}")
+        print(pretty(teacher_quiz_results_payload))
 
     if chosen_course and chosen_course.get("id"):
         course_id = chosen_course["id"]
         enroll_status, enroll_payload = scoped_request("POST", f"/courses/{course_id}/enroll/", token=token)
+        record_check(f"POST /courses/{course_id}/enroll/", enroll_status, {201, 400})
         print(f"[POST] /courses/{course_id}/enroll/ -> {enroll_status}")
         print(pretty(enroll_payload))
 
         quiz_status, quiz_payload = scoped_request("GET", f"/courses/{course_id}/quizzes/", token=token)
+        record_check(f"GET /courses/{course_id}/quizzes/", quiz_status, {200})
         print(f"[GET] /courses/{course_id}/quizzes/ -> {quiz_status}")
         print(pretty(quiz_payload))
 
@@ -179,6 +236,7 @@ def main() -> int:
 
         if chosen_quiz_id:
             start_status, start_payload = scoped_request("POST", f"/quizzes/{chosen_quiz_id}/start/", token=token)
+            record_check(f"POST /quizzes/{chosen_quiz_id}/start/", start_status, {201, 400, 403})
             print(f"[POST] /quizzes/{chosen_quiz_id}/start/ -> {start_status}")
             print(pretty(start_payload))
 
@@ -186,6 +244,7 @@ def main() -> int:
                 attempt_id = start_payload.get("id")
                 if attempt_id:
                     attempt_status, attempt_payload = scoped_request("GET", f"/attempts/{attempt_id}/", token=token)
+                    record_check(f"GET /attempts/{attempt_id}/", attempt_status, {200})
                     print(f"[GET] /attempts/{attempt_id}/ -> {attempt_status}")
                     print(pretty(attempt_payload))
         else:
@@ -193,8 +252,26 @@ def main() -> int:
     else:
         print("Không có course nào để test enroll/quiz.")
 
+    logout_status, logout_payload = scoped_request("POST", "/auth/logout/", token=token)
+    record_check("POST /auth/logout/", logout_status, {200})
+    print(f"[POST] /auth/logout/ -> {logout_status}")
+    print(pretty(logout_payload))
+
     print("=" * 60)
     print("API smoke test completed")
+    print("=" * 60)
+
+    failed = [check for check in checks if not check[2]]
+    print("CHECK SUMMARY")
+    for name, status_code, passed in checks:
+        state = "PASS" if passed else "FAIL"
+        print(f"- [{state}] {name} -> {status_code}")
+
+    if failed:
+        print("=" * 60)
+        print(f"Total failed checks: {len(failed)}")
+        return 1
+
     print("=" * 60)
     return 0
 
