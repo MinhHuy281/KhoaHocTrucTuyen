@@ -26,6 +26,7 @@
             <a href="/teacher/courses/">Quản lý khóa học</a>
             <a href="/teacher/create/">Tạo khóa học</a>
             <a href="{% url 'teacher_quiz_results' %}">Quản lý ôn luyện</a>
+            <a href="{% url 'teacher_report' %}">Báo cáo</a>
             <a href="{% url 'teacher_students' %}">Học viên</a> 
         </div>
 
@@ -176,25 +177,41 @@ function markNotiRead(event) {
         event.stopPropagation();
     }
 
-    fetch("/mark-notifications-read/", {
+    return fetch("/mark-notifications-read/", {
         method: "POST",
         headers: {
             "X-CSRFToken": getCookie("csrftoken"),
             "Content-Type": "application/json"
         }
-    }).then(() => {
-        location.reload();
     });
+}
+
+function clearTeacherNotiBadge() {
+    const badge = document.querySelector('#teacherNotiBtn .teacher-noti-badge');
+    if (badge) {
+        badge.remove();
+    }
 }
 
 const teacherNotiBox = document.getElementById("teacherNotiBox");
 const teacherNotiBtn = document.getElementById("teacherNotiBtn");
+let teacherNotiMarked = false;
 
 if (teacherNotiBox && teacherNotiBtn) {
     teacherNotiBtn.addEventListener("click", function (event) {
         event.preventDefault();
         event.stopPropagation();
+
+        const willOpen = !teacherNotiBox.classList.contains("is-open");
         teacherNotiBox.classList.toggle("is-open");
+
+        if (willOpen && !teacherNotiMarked) {
+            teacherNotiMarked = true;
+            clearTeacherNotiBadge();
+            markNotiRead().catch(() => {
+                teacherNotiMarked = false;
+            });
+        }
     });
 
     document.addEventListener("click", function (event) {

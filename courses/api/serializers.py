@@ -156,7 +156,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Enrollment
-        fields = ['id', 'user', 'course', 'created', 'is_paid', 'status']
+        fields = ['id', 'user', 'course', 'created', 'paid_at', 'is_paid', 'status']
 
 
 class EnrollmentDetailSerializer(serializers.ModelSerializer):

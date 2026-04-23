@@ -10,6 +10,8 @@ class InjectCurrentUserMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        original_user = request.user
+
         # Inject current_user cho student views
         request.current_user = SeparateSessionAuth.get_user(request)
         
@@ -22,11 +24,21 @@ class InjectCurrentUserMiddleware:
         
         # Override request.user theo khu vực để tách session teacher/user/admin.
         if request.path.startswith('/teacher/'):
-            request.user = request.current_teacher or AnonymousUser()
+            if request.current_teacher:
+                request.user = request.current_teacher
+            elif getattr(original_user, 'is_authenticated', False):
+                request.user = original_user
+            else:
+                request.user = AnonymousUser()
         elif request.path.startswith('/admin/'):
             pass  
         else:
-            request.user = request.current_user or AnonymousUser()
+            if request.current_user:
+                request.user = request.current_user
+            elif getattr(original_user, 'is_authenticated', False):
+                request.user = original_user
+            else:
+                request.user = AnonymousUser()
         
         response = self.get_response(request)
         return response

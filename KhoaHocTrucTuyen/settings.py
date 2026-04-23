@@ -152,6 +152,10 @@ USE_I18N = True
 USE_TZ = True 
 
 
+# Payment webhook security (optional but recommended in production)
+PAYMENT_WEBHOOK_SECRET = os.getenv('PAYMENT_WEBHOOK_SECRET', '')
+
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [

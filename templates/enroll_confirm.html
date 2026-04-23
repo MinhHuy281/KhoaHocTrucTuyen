@@ -25,19 +25,21 @@
         <div class="form-group">
             <label>👤 Họ và tên</label>
             <input type="text" name="full_name" class="form-control"
-                   placeholder="Nhập họ và tên" required>
+                   placeholder="Nhập họ và tên" value="{{ full_name }}" required>
         </div>
 
         <div class="form-group">
             <label>📧 Email</label>
             <input type="email" name="email" class="form-control"
-                   placeholder="Nhập email của bạn" required>
+                   placeholder="Nhập email của bạn" value="{{ email }}" required>
         </div>
 
         <div class="form-group">
-            <label>📱 Số điện thoại</label>
+            <label>📱 Số điện thoại (chỉ số)</label>
             <input type="tel" name="phone" class="form-control"
-                   placeholder="Nhập số điện thoại" required>
+                   placeholder="Nhập số điện thoại" value="{{ phone }}" 
+                   pattern="[0-9]{9,15}" inputmode="numeric"
+                   title="Chỉ nhập các chữ số (9-15 chữ số)" required>
         </div>
 
         <!-- COURSE INFO -->
@@ -71,6 +73,69 @@
         </div>
 
     </form>
+
+    <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const phoneInput = document.querySelector('input[name="phone"]');
+                if (!phoneInput) {
+                    return;
+                }
+
+                const allowControlKey = function(event) {
+                    return (
+                        event.ctrlKey ||
+                        event.metaKey ||
+                        [
+                            'Backspace',
+                            'Delete',
+                            'Tab',
+                            'Enter',
+                            'ArrowLeft',
+                            'ArrowRight',
+                            'ArrowUp',
+                            'ArrowDown',
+                            'Home',
+                            'End'
+                        ].includes(event.key)
+                    );
+                };
+
+                phoneInput.addEventListener('keydown', function(event) {
+                    if (allowControlKey(event)) {
+                        return;
+                    }
+                    if (!/^\d$/.test(event.key)) {
+                        event.preventDefault();
+                    }
+                });
+
+                phoneInput.addEventListener('beforeinput', function(event) {
+                    if (!event.data) {
+                        return;
+                    }
+                    if (!/^\d+$/.test(event.data)) {
+                        event.preventDefault();
+                    }
+                });
+
+                phoneInput.addEventListener('paste', function(event) {
+                    event.preventDefault();
+                    const text = (event.clipboardData || window.clipboardData).getData('text');
+                    const numbersOnly = text.replace(/\D/g, '');
+
+                    if (!numbersOnly) {
+                        return;
+                    }
+
+                    const start = this.selectionStart ?? this.value.length;
+                    const end = this.selectionEnd ?? this.value.length;
+                    this.value = this.value.slice(0, start) + numbersOnly + this.value.slice(end);
+                    const cursorPos = start + numbersOnly.length;
+                    this.setSelectionRange(cursorPos, cursorPos);
+                    this.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+            });
+    </script>
 
 </div>
 

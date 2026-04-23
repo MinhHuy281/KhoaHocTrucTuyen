@@ -19,7 +19,7 @@
 
             <input type="email" name="email" placeholder="Email" class="auth-input" value="{{ form_data.email|default:'' }}" required>
 
-            <input type="text" name="phone" placeholder="Số điện thoại" class="auth-input" value="{{ form_data.phone|default:'' }}">
+            <input type="tel" name="phone" placeholder="Số điện thoại" class="auth-input" value="{{ form_data.phone|default:'' }}" inputmode="numeric" pattern="[0-9]{9,15}" maxlength="15" title="Chỉ nhập các chữ số (9-15 chữ số)">
 
             <div class="password-field">
                 <input
@@ -72,5 +72,5 @@
         </div>
     </div>
 </div>
-<script src="{% static 'auth.js' %}?v=20260405-1"></script>
+<script src="{% static 'auth.js' %}?v=20260422-1"></script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.models import Avg, Count
+from django.utils import timezone
 from .models import *
 from .models import Course, Lesson, Enrollment, Level, Grade, Subject, Quiz, Question, Choice, UserQuizAttempt, Notification, LessonComment, CourseComment
 
@@ -46,10 +47,10 @@ class CourseAdmin(admin.ModelAdmin):
 # ✅ ENROLLMENT ADMIN
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('user', 'course', 'status', 'is_paid', 'created')
-    list_filter = ('status', 'is_paid', 'course', 'created')
+    list_display = ('user', 'course', 'status', 'is_paid', 'created', 'paid_at')
+    list_filter = ('status', 'is_paid', 'course', 'created', 'paid_at')
     search_fields = ('user__username', 'course__title')
-    readonly_fields = ('created',)
+    readonly_fields = ('created', 'paid_at')
     
     fieldsets = (
         ('👤 Người dùng', {
@@ -59,7 +60,7 @@ class EnrollmentAdmin(admin.ModelAdmin):
             'fields': ('course',)
         }),
         ('💳 Thanh toán', {
-            'fields': ('status', 'is_paid')
+            'fields': ('status', 'is_paid', 'paid_at')
         }),
         ('⏰ Thời gian', {
             'fields': ('created',)
@@ -70,7 +71,7 @@ class EnrollmentAdmin(admin.ModelAdmin):
     actions = ['approve_enrollments', 'reject_enrollments']
 
     def approve_enrollments(self, request, queryset):
-        updated = queryset.update(status='approved', is_paid=True)
+        updated = queryset.update(status='approved', is_paid=True, paid_at=timezone.now())
         self.message_user(request, f'✅ Đã duyệt {updated} đăng ký.')
     approve_enrollments.short_description = "✅ Duyệt thanh toán"
     
