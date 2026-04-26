@@ -75,9 +75,12 @@
                         ✏️ Chỉnh sửa
                     </a>
 
-                    <a href="{% url 'teacher_delete' course.id %}" class="btn-enroll" onclick="return confirm('Bạn có chắc muốn xóa?')">
-                        🗑️ Xóa
-                    </a>
+                    <form method="post" action="{% url 'teacher_delete' course.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-enroll" onclick="return confirm('Bạn có chắc muốn xóa?')">
+                            🗑️ Xóa
+                        </button>
+                    </form>
 
                     <a href="{% url 'create_quiz' course.id %}" class="btn-enroll">
                         📝 Tạo bài ôn tập
@@ -130,8 +133,6 @@
                            data-short="{{ lesson.content|truncatewords:40|escapejs }}">
                             {{ lesson.content|truncatewords:40 }}
                         </p>
-
-                        <button onclick="toggleContent(this)">Xem thêm</button>
                     </div>
                 </div>
             {% empty %}
@@ -180,44 +181,40 @@
                         {% for reply in comment.replies.all %}
                             <div class="course-comment-card__reply course-comment-card__reply--thread">
                                 <p class="course-comment-card__reply-title">
-                                    Phản hồi từ {{ reply.user.username }} - {{ reply.created_at|date:"d/m/Y H:i" }}
+                                    {% if reply.user_id == course.teacher_id %}
+                                        Phản hồi từ giảng viên
+                                    {% else %}
+                                        Phản hồi từ {{ reply.user.username }}
+                                    {% endif %}
+                                    - {{ reply.created_at|date:"d/m/Y H:i" }}
                                 </p>
                                 <p class="course-comment-card__reply-content">{{ reply.content }}</p>
                             </div>
                         {% endfor %}
                     {% endif %}
-                </article>
-            {% empty %}
-                <article class="course-comment-card">
-                    <p class="course-comment-card__content">Chưa có bình luận nào cho khóa học này.</p>
+
+                    <form method="post" class="course-comment-reply-form" style="margin-top: 10px;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reply_comment">
+                        <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                        <textarea name="reply_content" maxlength="1000" placeholder="Phản hồi bình luận này..." required style="width:100%; min-height:80px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; font-family: inherit;"></textarea>
+                        <button type="submit" style="margin-top: 8px; padding: 10px 16px; background: #1d4ed8; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Gửi phản hồi</button>
+                    </form>
                 </article>
             {% endfor %}
+
+            <article class="course-comment-card">
+                <p class="course-comment-card__content">Chưa có bình luận nào cho khóa học này.</p>
+                
+                <form method="post" class="course-comment-form" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_comment">
+                    <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">Viết bình luận hoặc trả lời học viên</h3>
+                    <textarea name="comment_content" maxlength="1000" placeholder="Nhập nội dung bình luận..." required style="width:100%; min-height:100px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; font-family: inherit; margin-bottom: 10px;"></textarea>
+                    <button type="submit" style="padding: 10px 20px; background: #1d4ed8; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Gửi bình luận</button>
+                </form>
+            </article>
         </div>
     </section>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function toggleContent(btn) {
-    const content = btn.previousElementSibling;
-
-    let fullText = content.getAttribute("data-full");
-    let shortText = content.getAttribute("data-short");
-
-    if (!fullText || !shortText) return;
-
-    fullText = JSON.parse('"' + fullText + '"');
-    shortText = JSON.parse('"' + shortText + '"');
-
-    if (btn.innerText === "Xem thêm") {
-        fullText = fullText.replace(/\r\n|\n|\r/g, "<br>");
-        content.innerHTML = fullText;
-        btn.innerText = "Thu gọn";
-    } else {
-        content.innerText = shortText;
-        btn.innerText = "Xem thêm";
-    }
-}
-</script>
 {% endblock %}

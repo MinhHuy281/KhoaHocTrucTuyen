@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Liên Hệ Tư Vấn - KhoaHocTrucTuyen{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'contact.css' %}?v=20260424-01">
+{% endblock %}
+
+{% block content %}
+<section class="contact-page">
+    <div class="contact-wrap">
+        <div class="contact-card contact-info-card">
+            <h1>Liên hệ tư vấn khóa học</h1>
+            <p>
+                Để lại thông tin, đội ngũ admin sẽ gọi lại hoặc nhắn cho bạn để tư vấn
+                lộ trình học phù hợp theo lớp, môn và mục tiêu.
+            </p>
+
+            <ul class="contact-note-list">
+                <li>Thời gian phản hồi dự kiến: 15 - 60 phút (giờ hành chính).</li>
+                <li>Vui lòng nhập đúng số điện thoại để tiện hỗ trợ nhanh.</li>
+                <li>Thông tin của bạn chỉ dùng cho mục đích tư vấn khóa học.</li>
+            </ul>
+        </div>
+
+        <div class="contact-card contact-form-card">
+            <form method="post" class="contact-form" novalidate>
+                {% csrf_token %}
+
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="full_name">Họ và tên <span>*</span></label>
+                        <input
+                            id="full_name"
+                            name="full_name"
+                            type="text"
+                            maxlength="120"
+                            required
+                            value="{{ form_data.full_name|default:'' }}"
+                            placeholder="Ví dụ: Nguyễn Văn A"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="phone">Số điện thoại <span>*</span></label>
+                        <input
+                            id="phone"
+                            name="phone"
+                            type="text"
+                            maxlength="20"
+                            required
+                            value="{{ form_data.phone|default:'' }}"
+                            placeholder="Ví dụ: 0989123456"
+                        >
+                    </div>
+                </div>
+
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            maxlength="254"
+                            value="{{ form_data.email|default:'' }}"
+                            placeholder="Ví dụ: ban@example.com"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="subject">Chủ đề cần tư vấn <span>*</span></label>
+                        <input
+                            id="subject"
+                            name="subject"
+                            type="text"
+                            maxlength="200"
+                            required
+                            value="{{ form_data.subject|default:'' }}"
+                            placeholder="Ví dụ: Khóa Toán 12 luyện thi"
+                        >
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="message">Nội dung chi tiết <span>*</span></label>
+                    <textarea
+                        id="message"
+                        name="message"
+                        rows="6"
+                        maxlength="2000"
+                        required
+                        placeholder="Bạn cần tư vấn cho lớp mấy, môn nào, mục tiêu học tập ra sao..."
+                    >{{ form_data.message|default:'' }}</textarea>
+                </div>
+
+                <div class="form-action">
+                    <button type="submit" class="btn-send">Gửi yêu cầu tư vấn</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

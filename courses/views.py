@@ -16,6 +16,7 @@ from django.core.exceptions import ValidationError
 from django.db import OperationalError, ProgrammingError, DatabaseError
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.http import url_has_allowed_host_and_scheme
 import json
 import re
 from datetime import datetime, time, timedelta
@@ -26,7 +27,7 @@ from urllib.request import Request, urlopen
 # Import models
 from .models import (
     Course, Lesson, Enrollment, Quiz, Question, Choice, UserQuizAttempt, UserAnswer,
-    Level, Grade, Subject, Notification, LessonComment, CourseComment
+    Level, Grade, Subject, Notification, LessonComment, CourseComment, ContactRequest
 )
 
 # Import accounts
@@ -39,11 +40,8 @@ COMMENT_META_TAG = "[[COMMENT_META]]"
 
 
 def get_payment_success_url(enrollment):
-    first_lesson = enrollment.course.lessons.order_by('order', 'id').first()
-    if first_lesson:
-        return reverse('lesson_view', args=[first_lesson.id])
-
-    return reverse('course_detail', args=[enrollment.course.id])
+    """Chuyển hướng về trang chi tiết khóa học sau khi thanh toán thành công."""
+    return reverse('course_detail', args=[enrollment.course_id])
 
 
 def get_payment_reference(enrollment):
@@ -525,7 +523,18 @@ def is_strong_password(password):
     return True
 
 
-def paginate_request_queryset(request, queryset, per_page=12, page_param='page'):
+def _get_safe_next_url(request):
+    next_url = (request.POST.get('next') or request.GET.get('next') or '').strip()
+    if not next_url:
+        return ''
+
+    if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return next_url
+
+    return ''
+
+
+def paginate_request_queryset(request, queryset, per_page=6, page_param='page'):
     paginator = Paginator(queryset, per_page)
     page_number = request.GET.get(page_param)
     page_obj = paginator.get_page(page_number)
@@ -613,6 +622,7 @@ def build_slide_urls(raw_url):
 def index(request):
     courses = (
         Course.objects
+        .select_related('teacher', 'subject', 'grade', 'level')
         .annotate(
             avg_rating=Avg(
                 'comments__rating',
@@ -641,6 +651,7 @@ def index(request):
 def courses(request):
     courses = (
         Course.objects
+        .select_related('teacher', 'subject', 'grade', 'level')
         .annotate(
             avg_rating=Avg(
                 'comments__rating',
@@ -661,6 +672,7 @@ def courses(request):
     level = request.GET.get("level")
     grade = request.GET.get("grade")
     subject = request.GET.get("subject")
+    price_type = request.GET.get("price_type")
     teacher = request.GET.get("teacher")
     q = request.GET.get("q")
 
@@ -670,6 +682,10 @@ def courses(request):
         courses = courses.filter(grade_id=grade)
     if subject:
         courses = courses.filter(subject_id=subject)
+    if price_type == 'free':
+        courses = courses.filter(Q(is_free=True) | Q(price=0))
+    elif price_type == 'paid':
+        courses = courses.filter(price__gt=0)
     if teacher:
         courses = courses.filter(teacher_id=teacher)
     if q:
@@ -695,6 +711,7 @@ def courses(request):
     })
 
 
+# Danh sách giảng viên + thống kê
 def teachers_statistics(request):
     teacher_profiles = UserProfile.objects.filter(role='teacher').select_related('user').annotate(
         courses_count=Count('user__courses_teaching', distinct=True),
@@ -743,6 +760,77 @@ def teachers_statistics(request):
         "subjects": subjects,
         "q": q,
     })
+
+
+def contact_request(request):
+    initial_data = {
+        'full_name': '',
+        'phone': '',
+        'email': '',
+        'subject': '',
+        'message': '',
+    }
+
+    if request.user.is_authenticated:
+        full_name = (f"{request.user.first_name} {request.user.last_name}").strip()
+        initial_data['full_name'] = full_name or request.user.username
+        initial_data['email'] = request.user.email or ''
+
+        profile = UserProfile.objects.filter(user=request.user).first()
+        if profile and profile.phone:
+            initial_data['phone'] = profile.phone
+
+    if request.method == 'POST':
+        full_name = (request.POST.get('full_name') or '').strip()
+        phone = (request.POST.get('phone') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        subject = (request.POST.get('subject') or '').strip()
+        message_text = (request.POST.get('message') or '').strip()
+
+        submitted_data = {
+            'full_name': full_name,
+            'phone': phone,
+            'email': email,
+            'subject': subject,
+            'message': message_text,
+        }
+
+        if not full_name or not phone or not subject or not message_text:
+            messages.error(request, 'Vui lòng điền đầy đủ các trường bắt buộc.')
+            return render(request, 'contact.html', {'form_data': submitted_data})
+
+        normalized_phone = re.sub(r'\s+', '', phone)
+        if not re.fullmatch(r'[0-9+\-]{8,20}', normalized_phone):
+            messages.error(request, 'Số điện thoại không hợp lệ. Vui lòng nhập từ 8-20 ký tự số.')
+            return render(request, 'contact.html', {'form_data': submitted_data})
+
+        if email and not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email):
+            messages.error(request, 'Email không đúng định dạng.')
+            return render(request, 'contact.html', {'form_data': submitted_data})
+
+        contact = ContactRequest.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            full_name=full_name,
+            phone=phone,
+            email=email,
+            subject=subject,
+            message=message_text,
+        )
+
+        admin_users = User.objects.filter(is_superuser=True, is_active=True)
+        for admin_user in admin_users:
+            Notification.objects.create(
+                user=admin_user,
+                message=(
+                    f"Yêu cầu tư vấn mới từ {contact.full_name} ({contact.phone}) - "
+                    f"Chủ đề: {contact.subject}."
+                ),
+            )
+
+        messages.success(request, 'Đã gửi thông tin liên hệ thành công. Admin sẽ liên hệ với bạn sớm nhất.')
+        return redirect('contact')
+
+    return render(request, 'contact.html', {'form_data': initial_data})
 
 
 # Chi tiết khóa học
@@ -984,13 +1072,15 @@ def lesson_view(request, lesson_id):
     # ===== CHECK QUYỀN =====
     enrollment = None
     if request.user.is_authenticated:
+        # Refresh from database to ensure we get the latest status
         enrollment = course.enrollments.filter(
             user=request.user,
             status='approved'   # 🔒 chỉ cho người đã duyệt
         ).first()
 
     # 👉 khóa có phí chỉ mở khi đã được duyệt thanh toán
-    if not (course.price == 0 or enrollment):
+    # BUT: Cũng cho phép xem nếu là khóa học miễn phí
+    if course.price > 0 and not enrollment:
         messages.warning(request, 'Vui lòng đăng ký khóa học để xem bài này.')
         return redirect('course_detail', course_id=course.id)
 
@@ -1204,88 +1294,71 @@ def lesson_view(request, lesson_id):
 # ĐĂNG NHẬP HỌC VIÊN
 def login_view(request):
     """Đăng nhập USER/STUDENT tại /login/."""
-    if request.method == 'POST':
-        # Luôn xóa session cũ trước khi thử đăng nhập tài khoản khác.
-        SeparateSessionAuth.logout_user(request)
-        SeparateSessionAuth.logout_teacher(request)
+    next_url = _get_safe_next_url(request)
 
+    if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-
-        if not is_strong_password(password or ""):
-            messages.error(
-                request,
-                '❌ Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
-            )
-            return render(request, 'login.html')
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
             if user.is_superuser:
                 messages.error(request, '❌ Tài khoản quản trị vui lòng đăng nhập tại trang admin.')
-                return render(request, 'login.html')
+                return render(request, 'login.html', {'next_url': next_url})
 
             # Tài khoản staff (giảng viên/nhân sự) không đăng nhập ở trang học viên.
             if user.is_staff:
                 messages.error(request, '❌ Tài khoản này vui lòng đăng nhập ở trang giảng viên hoặc admin.')
-                return render(request, 'login.html')
+                return render(request, 'login.html', {'next_url': next_url})
 
             # Chỉ cho student/user vào login này.
             if hasattr(user, 'profile') and user.profile.is_teacher():
                 messages.error(request, '❌ Đây là tài khoản giảng viên. Vui lòng đăng nhập ở trang giảng viên.')
-                return render(request, 'login.html')
+                return render(request, 'login.html', {'next_url': next_url})
 
             SeparateSessionAuth.login_user(request, user)
             messages.success(request, f'👋 Chào mừng {user.username}!')
-            return redirect('/')
+            return redirect(next_url or '/')
         else:
             messages.error(request, '❌ Tên đăng nhập hoặc mật khẩu sai!')
-            return render(request, 'login.html')
+            return render(request, 'login.html', {'next_url': next_url})
 
-    return render(request, 'login.html')
+    return render(request, 'login.html', {'next_url': next_url})
 
 
+# ĐĂNG NHẬP GIẢNG VIÊN
 def teacher_login_view(request):
     """Đăng nhập TEACHER tại /teacher/login/."""
-    if request.method == 'POST':
-        # Luôn xóa session cũ trước khi thử đăng nhập tài khoản khác.
-        SeparateSessionAuth.logout_user(request)
-        SeparateSessionAuth.logout_teacher(request)
+    next_url = _get_safe_next_url(request)
 
+    if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-
-        if not is_strong_password(password or ""):
-            messages.error(
-                request,
-                '❌ Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.'
-            )
-            return render(request, 'teacher_login.html')
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
             if user.is_superuser:
                 messages.error(request, '❌ Tài khoản quản trị vui lòng đăng nhập tại trang admin.')
-                return render(request, 'teacher_login.html')
+                return render(request, 'teacher_login.html', {'next_url': next_url})
 
             try:
                 if hasattr(user, 'profile') and user.profile.is_teacher():
                     SeparateSessionAuth.login_teacher(request, user)
                     messages.success(request, f'👋 Chào mừng giảng viên {user.username}!')
-                    return redirect('/teacher/')
+                    return redirect(next_url or '/teacher/')
 
                 messages.error(request, '❌ Tài khoản này không phải giảng viên!')
-                return render(request, 'teacher_login.html')
+                return render(request, 'teacher_login.html', {'next_url': next_url})
             except Exception:
                 messages.error(request, '❌ Tài khoản này không phải giảng viên!')
-                return render(request, 'teacher_login.html')
+                return render(request, 'teacher_login.html', {'next_url': next_url})
         else:
             messages.error(request, '❌ Tên đăng nhập hoặc mật khẩu sai!')
-            return render(request, 'teacher_login.html')
+            return render(request, 'teacher_login.html', {'next_url': next_url})
 
-    return render(request, 'teacher_login.html')
+    return render(request, 'teacher_login.html', {'next_url': next_url})
 
 
 # ĐĂNG KÝ
@@ -1347,25 +1420,23 @@ def _register_by_role(request, role='student'):
             user.is_staff = True
             user.save()
             messages.success(request, '✅ Đăng ký giảng viên thành công!')
-            # Tách hẳn session: clear user session trước khi login teacher
-            SeparateSessionAuth.logout_user(request)
             SeparateSessionAuth.login_teacher(request, user)
             return redirect('/teacher/')
         else:
             messages.success(request, '✅ Đăng ký học viên thành công!')
-            # Tách hẳn session: clear teacher session trước khi login user
-            SeparateSessionAuth.logout_teacher(request)
             SeparateSessionAuth.login_user(request, user)
             return redirect('/')
 
     return render(request, template_name)
 
 
+# ĐĂNG KÝ HỌC VIÊN
 def register_view(request):
     """Đăng ký học viên (route mặc định /register/)."""
     return _register_by_role(request, role='student')
 
 
+# ĐĂNG KÝ GIẢNG VIÊN
 def register_teacher_view(request):
     """Đăng ký giảng viên riêng biệt (route /teacher/register/)."""
     return _register_by_role(request, role='teacher')
@@ -1373,12 +1444,23 @@ def register_teacher_view(request):
 
 # ĐĂNG XUẤT
 def logout_view(request):
-    """Đăng xuất - xóa cả 2 session"""
-    SeparateSessionAuth.logout_user(request)
-    SeparateSessionAuth.logout_teacher(request)
-    django_logout(request)
-    messages.success(request, '👋 Đã đăng xuất!')
-    return redirect('/')
+    """Đăng xuất theo scope (user/teacher); mặc định xóa cả hai."""
+    scope = (request.POST.get('scope') or request.GET.get('scope') or '').strip().lower()
+
+    if scope == 'user':
+        SeparateSessionAuth.logout_user(request)
+        messages.success(request, '👋 Đã đăng xuất tài khoản học viên!')
+        return redirect('/login/')
+    elif scope == 'teacher':
+        SeparateSessionAuth.logout_teacher(request)
+        messages.success(request, '👋 Đã đăng xuất tài khoản giảng viên!')
+        return redirect('/teacher/login/')
+    else:
+        SeparateSessionAuth.logout_user(request)
+        SeparateSessionAuth.logout_teacher(request)
+        django_logout(request)
+        messages.success(request, '👋 Đã đăng xuất!')
+        return redirect('/')
 
 
 @student_required
@@ -1576,6 +1658,7 @@ def take_quiz(request, attempt_id):
     })
 # ================= TEACHER =================
 
+# Tạo dữ liệu báo cáo theo ngày cho giảng viên
 def build_teacher_daily_report_context(request, teacher):
     raw_report_date = (request.GET.get('report_date') or '').strip()
 
@@ -1687,6 +1770,7 @@ def teacher_dashboard(request):
 
 
 @teacher_required
+# Trang báo cáo giảng viên
 def teacher_report(request):
     if not request.user.is_staff:
         return redirect('/')
@@ -1696,6 +1780,7 @@ def teacher_report(request):
 
 
 @teacher_required
+# Danh sách học viên của giảng viên
 def teacher_students(request):
     teacher = request.current_teacher
     q = (request.GET.get('q') or '').strip()
@@ -1761,7 +1846,7 @@ def teacher_students(request):
     page_obj, query_string = paginate_request_queryset(
         request,
         students_data,
-        per_page=8,
+        per_page=6,
         page_param='student_page'
     )
 
@@ -1776,6 +1861,7 @@ def teacher_students(request):
 
 
 @teacher_required
+# Hồ sơ giảng viên
 def teacher_profile(request):
     teacher = request.current_teacher
     profile, _ = UserProfile.objects.get_or_create(
@@ -1848,6 +1934,7 @@ def teacher_profile(request):
     })
 
 @teacher_required
+# Danh sách khóa học của giảng viên
 def teacher_courses(request):
     if not request.user.is_staff:
         return redirect('/')
@@ -1882,6 +1969,7 @@ def teacher_courses(request):
 
 
 @teacher_required
+# Tạo khóa học mới
 def teacher_create_course(request):
     if not request.user.is_staff:
         return redirect('/')
@@ -1960,6 +2048,7 @@ def teacher_create_course(request):
     })
 
 @teacher_required
+# Chỉnh sửa khóa học
 def teacher_edit_course(request, id):
     if not request.user.is_staff:
         return redirect('/')
@@ -2014,6 +2103,7 @@ def teacher_edit_course(request, id):
 
 
 @student_required
+# Kết quả bài ôn luyện
 def quiz_result(request, attempt_id):
     attempt = get_object_or_404(UserQuizAttempt, id=attempt_id, user=request.user)
     answers = attempt.answers.all().select_related('question', 'selected_choice')
@@ -2023,6 +2113,7 @@ def quiz_result(request, attempt_id):
     })
 
 @student_required
+# Danh sách ôn luyện tổng hợp
 def quiz_list_all(request):
     # Chỉ hiển thị bài ôn luyện của các khóa đã được duyệt học.
     enrolled_courses = Course.objects.filter(
@@ -2030,7 +2121,13 @@ def quiz_list_all(request):
         enrollments__status='approved'
     ).distinct()
 
-    quizzes = Quiz.objects.filter(course__in=enrolled_courses).order_by('-created_at').distinct()
+    quizzes = (
+        Quiz.objects
+        .select_related('course', 'course__teacher')
+        .filter(course__in=enrolled_courses)
+        .order_by('-created_at')
+        .distinct()
+    )
     page_obj, query_string = paginate_request_queryset(request, quizzes, per_page=6)
 
     if not quizzes.exists():
@@ -2042,16 +2139,27 @@ def quiz_list_all(request):
         'query_string': query_string,
         'title': 'Ôn Luyện Tất Cả'
     })
+
+
+@teacher_required
+# Xóa khóa học
 def teacher_delete_course(request, id):
-    if not request.user.is_staff:
+    if not request.current_teacher or not request.current_teacher.is_staff:
         return redirect('/')
 
-    course = get_object_or_404(Course, id=id, teacher=request.user)
+    course = get_object_or_404(Course, id=id, teacher=request.current_teacher)
+
+    if request.method != 'POST':
+        messages.error(request, '❌ Hành động không hợp lệ. Vui lòng gửi yêu cầu xóa từ biểu mẫu.')
+        return redirect('teacher_course_detail', id=id)
+
     course.delete()
+    messages.success(request, '✅ Đã xóa khóa học thành công!')
 
     return redirect('/teacher/courses/')
 
 @teacher_required
+# Chi tiết khóa học (teacher)
 def teacher_course_detail(request, id):
     teacher = request.current_teacher
     course = get_object_or_404(Course, id=id, teacher=teacher)
@@ -2059,6 +2167,71 @@ def teacher_course_detail(request, id):
     first_lesson = lessons.first()
     slide_embed_url = ""
     slide_download_url = ""
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        if action == 'reply_comment':
+            reply_text = (request.POST.get('reply_content') or '').strip()
+            parent_comment_id = request.POST.get('comment_id')
+
+            parent_comment = CourseComment.objects.filter(
+                id=parent_comment_id,
+                course=course,
+                parent_comment__isnull=True,
+            ).select_related('user').first()
+
+            if not parent_comment:
+                messages.error(request, 'Không tìm thấy bình luận để phản hồi.')
+                return redirect('teacher_course_detail', id=course.id)
+
+            if not reply_text:
+                messages.error(request, 'Nội dung phản hồi không được để trống.')
+                return redirect('teacher_course_detail', id=course.id)
+
+            fallback_rating = parent_comment.rating if getattr(parent_comment, 'rating', None) else 5
+            CourseComment.objects.create(
+                course=course,
+                user=teacher,
+                content=reply_text,
+                rating=fallback_rating,
+                parent_comment=parent_comment,
+            )
+
+            recipient = parent_comment.user
+            if recipient and recipient != teacher:
+                meta = {
+                    'type': 'course',
+                    'course_id': str(course.id),
+                    'comment_id': str(parent_comment.id),
+                    'student_id': str(recipient.id),
+                }
+                Notification.objects.create(
+                    user=recipient,
+                    message=build_comment_notification_message(
+                        f"Giảng viên {teacher.username} đã phản hồi bình luận của bạn trong khóa '{course.title}': \"{reply_text[:150]}\"",
+                        meta,
+                    )
+                )
+
+            messages.success(request, 'Đã gửi phản hồi cho học viên.')
+            return redirect('teacher_course_detail', id=course.id)
+        
+        elif action == 'add_comment':
+            comment_text = (request.POST.get('comment_content') or '').strip()
+            
+            if not comment_text:
+                messages.error(request, 'Nội dung bình luận không được để trống.')
+                return redirect('teacher_course_detail', id=course.id)
+            
+            CourseComment.objects.create(
+                course=course,
+                user=teacher,
+                content=comment_text,
+                rating=5,
+            )
+            
+            messages.success(request, 'Đã thêm bình luận thành công.')
+            return redirect('teacher_course_detail', id=course.id)
 
     if first_lesson and first_lesson.slide_url:
         slide_embed_url, slide_download_url = build_slide_urls(first_lesson.slide_url)
@@ -2107,7 +2280,102 @@ def teacher_course_detail(request, id):
         'rating_rows': rating_rows,
     })
 
+
 @teacher_required
+def teacher_lesson_view(request, lesson_id):
+    teacher = request.current_teacher
+    lesson = get_object_or_404(
+        Lesson.objects.select_related('course', 'course__teacher'),
+        id=lesson_id,
+        course__teacher=teacher,
+    )
+    course = lesson.course
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip()
+        if action == 'reply_comment':
+            reply_text = (request.POST.get('reply_content') or '').strip()
+            parent_comment_id = request.POST.get('comment_id')
+
+            parent_comment = LessonComment.objects.filter(
+                id=parent_comment_id,
+                lesson=lesson,
+                parent_comment__isnull=True,
+            ).select_related('user').first()
+
+            if not parent_comment:
+                messages.error(request, 'Không tìm thấy bình luận để phản hồi.')
+                return redirect('teacher_lesson_view', lesson_id=lesson.id)
+
+            if not reply_text:
+                messages.error(request, 'Nội dung phản hồi không được để trống.')
+                return redirect('teacher_lesson_view', lesson_id=lesson.id)
+
+            fallback_rating = parent_comment.rating if getattr(parent_comment, 'rating', None) else 5
+            LessonComment.objects.create(
+                lesson=lesson,
+                user=teacher,
+                content=reply_text,
+                rating=fallback_rating,
+                parent_comment=parent_comment,
+            )
+
+            recipient = parent_comment.user
+            if recipient and recipient != teacher:
+                meta = {
+                    'type': 'lesson',
+                    'course_id': str(course.id),
+                    'lesson_id': str(lesson.id),
+                    'comment_id': str(parent_comment.id),
+                    'student_id': str(recipient.id),
+                }
+                Notification.objects.create(
+                    user=recipient,
+                    message=build_comment_notification_message(
+                        f"Giảng viên {teacher.username} đã phản hồi bình luận của bạn ở bài '{lesson.title}' trong khóa '{course.title}': \"{reply_text[:150]}\"",
+                        meta,
+                    )
+                )
+
+            messages.success(request, 'Đã gửi phản hồi cho học viên.')
+            return redirect('teacher_lesson_view', lesson_id=lesson.id)
+
+    comments = (
+        lesson.comments
+        .filter(parent_comment__isnull=True)
+        .select_related('user')
+        .prefetch_related(
+            Prefetch(
+                'replies',
+                queryset=LessonComment.objects.select_related('user').order_by('created_at')
+            )
+        )
+        .order_by('-created_at')
+    )
+
+    rating_summary = comments.aggregate(avg_rating=Avg('rating'), total_ratings=Count('id'))
+    average_rating = rating_summary['avg_rating'] or 0
+    total_ratings = rating_summary['total_ratings'] or 0
+
+    video_id = lesson.get_youtube_id()
+    slide_embed_url = ""
+    slide_download_url = ""
+    if lesson.slide_url:
+        slide_embed_url, slide_download_url = build_slide_urls(lesson.slide_url)
+
+    return render(request, 'teacher/lesson_view.html', {
+        'lesson': lesson,
+        'course': course,
+        'video_id': video_id,
+        'slide_embed_url': slide_embed_url,
+        'slide_download_url': slide_download_url,
+        'comments': comments,
+        'average_rating': round(average_rating, 1),
+        'total_ratings': total_ratings,
+    })
+
+@teacher_required
+# Danh sách kết quả ôn luyện của giảng viên
 def teacher_quiz_results(request):
     if not request.user.is_staff:
         return redirect('/')
@@ -2120,7 +2388,7 @@ def teacher_quiz_results(request):
     quiz_page_obj, quiz_query_string = paginate_request_queryset(
         request,
         quizzes,
-        per_page=10,
+        per_page=6,
         page_param='quiz_page'
     )
 
@@ -2143,6 +2411,7 @@ def teacher_quiz_results(request):
 
 @teacher_required
 @teacher_required
+# Chi tiết bài làm của học viên
 def teacher_attempt_detail(request, attempt_id):
     """Xem chi tiết câu trả lời của học viên"""
     teacher = request.current_teacher
@@ -2176,12 +2445,14 @@ def teacher_attempt_detail(request, attempt_id):
 
 
 @teacher_required
+# Quản lý ôn luyện
 def teacher_quiz_management(request):
     """Quản lý bài ôn luyện - Xem danh sách, tạo, sửa, xóa"""
     return redirect('teacher_quiz_results')
 
 
 @teacher_required
+# Tạo bài ôn luyện (standalone)
 def teacher_create_quiz_standalone(request):
     """Tạo bài ôn luyện mới"""
     if not request.user.is_staff:
@@ -2281,6 +2552,7 @@ def teacher_create_quiz_standalone(request):
 
 
 @teacher_required
+# Chỉnh sửa bài ôn luyện
 def teacher_edit_quiz(request, quiz_id):
     """Chỉnh sửa bài ôn luyện"""
     if not request.user.is_staff:
@@ -2408,6 +2680,7 @@ def teacher_edit_quiz(request, quiz_id):
 
 
 @teacher_required
+# Xóa bài ôn luyện
 def teacher_delete_quiz(request, quiz_id):
     """Xóa bài ôn luyện"""
     if not request.user.is_staff:
@@ -2425,6 +2698,7 @@ def teacher_delete_quiz(request, quiz_id):
     })
 
 @teacher_required
+# Chỉnh sửa khóa học (phiên bản cập nhật lesson)
 def teacher_edit_course(request, id):
     if not request.user.is_staff:
         return redirect('/')
@@ -2483,6 +2757,7 @@ def teacher_edit_course(request, id):
     })
 
 @teacher_required
+# Tạo bài ôn luyện theo khóa học
 def create_quiz(request, id):
     teacher = request.current_teacher
     course = get_object_or_404(Course, id=id, teacher=teacher)
@@ -2574,6 +2849,7 @@ def payment(request, enrollment_id):
 
 
 @student_required
+# Kiểm tra trạng thái thanh toán
 def payment_status(request, enrollment_id):
     enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user)
     success_url = get_payment_success_url(enrollment)
@@ -2586,6 +2862,7 @@ def payment_status(request, enrollment_id):
 
 
 @csrf_exempt
+#+#+#+#+ Thanh toán webhook
 def payment_webhook(request):
     """Receive payment notifications from bank gateway and auto-approve enrollment."""
     if request.method != 'POST':
@@ -2623,6 +2900,7 @@ def payment_webhook(request):
 
 
 @student_required
+# Xác nhận thanh toán
 def payment_confirm(request, enrollment_id):
     """Xác nhận thanh toán và cập nhật trạng thái enrollment"""
     enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user)
@@ -2631,6 +2909,10 @@ def payment_confirm(request, enrollment_id):
         if enrollment.status != 'approved':
             enrollment.approve()
             _create_payment_notification(enrollment)
+        
+        # Reload from database to ensure we have the latest status
+        connection.close()  # Close any stale connections
+        enrollment.refresh_from_db()
         
         success_url = get_payment_success_url(enrollment)
         return JsonResponse({
@@ -2643,6 +2925,7 @@ def payment_confirm(request, enrollment_id):
 
 
 @student_required
+# Đăng ký khóa học
 def enroll_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
 
@@ -2712,6 +2995,7 @@ def enroll_course(request, course_id):
 
 
 @teacher_required
+# Đánh dấu đã đọc thông báo (teacher)
 def mark_notifications_read(request):
     if request.method == "POST":
         Notification.objects.filter(
@@ -2723,6 +3007,7 @@ def mark_notifications_read(request):
 
 
 @student_required
+# Đánh dấu đã đọc thông báo (student)
 def mark_user_notifications_read(request):
     if request.method == "POST":
         Notification.objects.filter(
@@ -2734,6 +3019,7 @@ def mark_user_notifications_read(request):
 
 
 @student_required
+# Học viên phản hồi bình luận
 def user_reply_comment(request, notification_id):
     current_user = getattr(request, 'current_user', None) or request.user
     notification = Notification.objects.filter(id=notification_id, user=current_user).first()
@@ -2901,6 +3187,7 @@ def user_reply_comment(request, notification_id):
 
 
 @teacher_required
+# Giảng viên phản hồi bình luận
 def teacher_reply_comment(request, notification_id):
     current_teacher = getattr(request, 'current_teacher', None) or request.user
     notification = Notification.objects.filter(id=notification_id, user=current_teacher).first()

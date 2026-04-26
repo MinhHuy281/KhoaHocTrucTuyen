@@ -1,6 +1,7 @@
 {% if page_obj and page_obj.paginator.num_pages > 1 %}
 {% with current_param=page_param|default:'page' %}
-<nav class="pagination-wrap" aria-label="Pagination">
+{% with anchor_id=pagination_anchor|default:'pagination-'|add:current_param %}
+<nav id="{{ anchor_id }}" class="pagination-wrap" aria-label="Pagination">
     <div class="pagination-meta">
         <span>Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
         <span>Tổng {{ page_obj.paginator.count }} mục</span>
@@ -9,10 +10,10 @@
     <ul class="pagination-list">
         {% if page_obj.has_previous %}
             <li class="pagination-item">
-                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}=1" aria-label="Trang đầu">&laquo;</a>
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}=1#{{ anchor_id }}" aria-label="Trang đầu">&laquo;</a>
             </li>
             <li class="pagination-item">
-                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.previous_page_number }}" aria-label="Trang trước">Trước</a>
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.previous_page_number }}#{{ anchor_id }}" aria-label="Trang trước">Trước</a>
             </li>
         {% endif %}
 
@@ -27,7 +28,7 @@
                         <li class="pagination-item active"><span class="pagination-link">{{ num }}</span></li>
                     {% else %}
                         <li class="pagination-item">
-                            <a class="pagination-link" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ num }}">{{ num }}</a>
+                            <a class="pagination-link" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ num }}#{{ anchor_id }}">{{ num }}</a>
                         </li>
                     {% endif %}
                 {% endif %}
@@ -40,13 +41,113 @@
 
         {% if page_obj.has_next %}
             <li class="pagination-item">
-                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.next_page_number }}" aria-label="Trang sau">Sau</a>
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.next_page_number }}#{{ anchor_id }}" aria-label="Trang sau">Sau</a>
             </li>
             <li class="pagination-item">
-                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.paginator.num_pages }}" aria-label="Trang cuối">&raquo;</a>
+                <a class="pagination-link pagination-ctrl" href="?{% if query_string %}{{ query_string }}&{% endif %}{{ current_param }}={{ page_obj.paginator.num_pages }}#{{ anchor_id }}" aria-label="Trang cuối">&raquo;</a>
             </li>
         {% endif %}
     </ul>
 </nav>
+
+<script>
+(function () {
+    if (window.__paginationScrollEnhancerReady) {
+        return;
+    }
+    window.__paginationScrollEnhancerReady = true;
+
+    const STORAGE_KEY = 'khtt_pagination_scroll_restore';
+
+    function normalizeUrl(urlValue) {
+        try {
+            const url = new URL(urlValue, window.location.origin);
+            return url.pathname + url.search;
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function restoreScrollIfNeeded() {
+        let payloadRaw = null;
+        try {
+            payloadRaw = sessionStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+            return;
+        }
+
+        if (!payloadRaw) {
+            return;
+        }
+
+        let payload = null;
+        try {
+            payload = JSON.parse(payloadRaw);
+        } catch (error) {
+            sessionStorage.removeItem(STORAGE_KEY);
+            return;
+        }
+
+        if (!payload || typeof payload !== 'object') {
+            sessionStorage.removeItem(STORAGE_KEY);
+            return;
+        }
+
+        const targetPathSearch = normalizeUrl(payload.toUrl || '');
+        const currentPathSearch = window.location.pathname + window.location.search;
+        const isSameTarget = targetPathSearch && targetPathSearch === currentPathSearch;
+        const hasValidScroll = Number.isFinite(payload.scrollY) && payload.scrollY >= 0;
+
+        if (!isSameTarget || !hasValidScroll) {
+            sessionStorage.removeItem(STORAGE_KEY);
+            return;
+        }
+
+        const restoreY = Math.round(payload.scrollY);
+        const doRestore = function () {
+            window.scrollTo({ top: restoreY, left: 0, behavior: 'auto' });
+        };
+
+        requestAnimationFrame(function () {
+            doRestore();
+            requestAnimationFrame(doRestore);
+            setTimeout(doRestore, 80);
+        });
+
+        sessionStorage.removeItem(STORAGE_KEY);
+    }
+
+    document.addEventListener('click', function (event) {
+        const link = event.target.closest('a.pagination-link[href]');
+        if (!link) {
+            return;
+        }
+
+        const href = link.getAttribute('href') || '';
+        if (!href || href.startsWith('#')) {
+            return;
+        }
+
+        const payload = {
+            toUrl: link.href,
+            scrollY: window.scrollY,
+            savedAt: Date.now()
+        };
+
+        try {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch (error) {
+            // Ignore storage errors and continue normal navigation.
+        }
+    }, true);
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', restoreScrollIfNeeded, { once: true });
+    } else {
+        restoreScrollIfNeeded();
+    }
+})();
+</script>
+{% endwith %}
 {% endwith %}
 {% endif %}

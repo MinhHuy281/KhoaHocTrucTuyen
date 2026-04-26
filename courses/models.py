@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 from django.utils import timezone
 
+# Model cấp học
 class Level(models.Model):
     name = models.CharField(max_length=50)
 
@@ -26,6 +27,7 @@ class Subject(models.Model):
         return self.name
 
 
+# Model khóa học
 class Course(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -61,6 +63,7 @@ class Course(models.Model):
         return f"{self.title} - {teacher_name}"
 
 
+# Model bài học
 class Lesson(models.Model):
     course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='lessons')
     title = models.CharField(max_length=200)
@@ -115,6 +118,8 @@ class Lesson(models.Model):
 
         return None
 
+
+# Model đăng ký khóa học
 class Enrollment(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Chờ thanh toán'),
@@ -146,6 +151,8 @@ class Enrollment(models.Model):
     def can_learn(self):
         return self.status == 'approved'
 
+
+# Model bài ôn luyện
 class Quiz(models.Model):
     """Bài tập ôn luyện gắn với một Lesson hoặc Course"""
     course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='quizzes')
@@ -169,6 +176,8 @@ class Quiz(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+
+# Model câu hỏi
 class Question(models.Model):
     """Câu hỏi trắc nghiệm"""
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
@@ -182,6 +191,8 @@ class Question(models.Model):
     class Meta:
         ordering = ['order']
 
+
+# Model lựa chọn đáp án
 class Choice(models.Model):
     """Lựa chọn (option) cho câu hỏi"""
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='choices')
@@ -191,6 +202,8 @@ class Choice(models.Model):
     def __str__(self):
         return self.text[:50]
 
+
+# Model lượt làm bài của học viên
 class UserQuizAttempt(models.Model):
     """Kết quả làm bài của user"""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -233,6 +246,8 @@ class UserQuizAttempt(models.Model):
         self.save()
 
 
+
+# Model câu trả lời của học viên
 class UserAnswer(models.Model):
     """Câu trả lời của user cho từng câu hỏi"""
     attempt = models.ForeignKey(UserQuizAttempt, on_delete=models.CASCADE, related_name='answers')
@@ -244,6 +259,8 @@ class UserAnswer(models.Model):
         return f"{self.attempt.user.username} - {self.question.text[:30]}"
 
 
+
+# Model thông báo
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
     message = models.TextField()
@@ -254,6 +271,8 @@ class Notification(models.Model):
         return self.message
 
 
+
+# Model bình luận bài học
 class LessonComment(models.Model):
     lesson = models.ForeignKey('Lesson', on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lesson_comments')
@@ -293,6 +312,8 @@ class LessonComment(models.Model):
         return self.parent_comment is None
 
 
+
+# Model bình luận khóa học
 class CourseComment(models.Model):
     course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_comments')
@@ -330,3 +351,28 @@ class CourseComment(models.Model):
     # 🆕 Kiểm tra có phải comment gốc không
     def is_root_comment(self):
         return self.parent_comment is None
+
+# Liên hệ
+class ContactRequest(models.Model):
+    CONTACT_STATUS_CHOICES = (
+        ('new', 'Mới nhận'),
+        ('contacted', 'Đã liên hệ'),
+        ('closed', 'Đã xử lý'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='contact_requests')
+    full_name = models.CharField(max_length=120)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True)
+    subject = models.CharField(max_length=200)
+    message = models.TextField(max_length=2000)
+    status = models.CharField(max_length=20, choices=CONTACT_STATUS_CHOICES, default='new')
+    admin_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.full_name} - {self.subject} ({self.get_status_display()})"

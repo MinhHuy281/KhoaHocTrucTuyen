@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "teacher/teacher_base.html" %}
 {% load static %}
 
 {% block title %}Đăng nhập giảng viên{% endblock %}
@@ -14,6 +14,9 @@
 
         <form method="POST" class="auth-form">
             {% csrf_token %}
+            {% if next_url %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+            {% endif %}
 
             <input type="text" name="username" placeholder="Tên đăng nhập" class="auth-input" required>
             <div class="password-field">
@@ -41,7 +44,7 @@
         </form>
 
         <div class="auth-link">
-            <a href="{% url 'login' %}">Đăng nhập học viên</a> |
+            <a href="{% url 'login' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}">Đăng nhập học viên</a> |
             <a href="{% url 'password_reset' %}">Quên mật khẩu?</a> |
             Chưa có tài khoản giảng viên? <a href="{% url 'teacher_register' %}">Đăng ký giảng viên</a>
         </div>

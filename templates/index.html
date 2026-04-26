@@ -88,6 +88,7 @@
             <div class="course-meta">
               <span>Môn: {{ course.subject }}</span>
               <span>Lớp: {{ course.grade }}</span>
+              <span>Giảng viên: {{ course.teacher.username|default:"Chưa cập nhật" }}</span>
             </div>
             <div class="course-rating-inline">
               {% if course.rating_count %}

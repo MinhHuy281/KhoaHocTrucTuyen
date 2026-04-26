@@ -40,6 +40,7 @@
                     <h3>{{ quiz.title }}</h3>
                     <div class="quiz-meta">
                         <span>📚 {{ quiz.course.title }}</span>
+                        <span>👨‍🏫 {{ quiz.course.teacher.username|default:"Chưa cập nhật" }}</span>
                         <span>⏱ {{ quiz.minutes }} phút</span>
                     </div>
                     <a href="{% url 'start_quiz' quiz.id %}" class="quiz-btn">Bắt đầu làm bài</a>

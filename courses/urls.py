@@ -14,6 +14,9 @@ urlpatterns = [
     # Danh sách giảng viên + thống kê
     path('teachers/', views.teachers_statistics, name='teachers_statistics'),
 
+    # Liên hệ tư vấn
+    path('lien-he/', views.contact_request, name='contact'),
+
     # Chi tiết khóa học
     path('course/<int:course_id>/', views.course_detail, name='course_detail'),
 
@@ -61,6 +64,7 @@ urlpatterns = [
     path('teacher/delete/<int:id>/', views.teacher_delete_course, name='teacher_delete'),
 
     path('teacher/course/<int:id>/', views.teacher_course_detail, name='teacher_course_detail'),
+    path('teacher/lesson/<int:lesson_id>/', views.teacher_lesson_view, name='teacher_lesson_view'),
     
     path('teacher/course/<int:id>/quiz/create/', views.create_quiz, name='create_quiz'),
 

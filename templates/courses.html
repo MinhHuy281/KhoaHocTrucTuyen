@@ -61,6 +61,15 @@
                 </select>
             </div>
 
+            <div class="filter-group">
+                <label for="price_type">Học phí</label>
+                <select id="price_type" name="price_type" class="filter-select">
+                    <option value="">Tất cả</option>
+                    <option value="free" {% if request.GET.price_type == 'free' %}selected{% endif %}>Miễn phí</option>
+                    <option value="paid" {% if request.GET.price_type == 'paid' %}selected{% endif %}>Có phí</option>
+                </select>
+            </div>
+
             <div class="filter-actions">
                 <button type="submit" class="filter-apply">Áp dụng</button>
                 <a href="{% url 'courses' %}" class="filter-clear">Xóa lọc</a>
@@ -85,6 +94,7 @@
                 <div class="course-info">
                     <h3>{{ course.title }}</h3>
                     <p>Môn: {{ course.subject }} • Lớp: {{ course.grade }} • Cấp: {{ course.level }}</p>
+                    <p class="course-teacher-line">Giảng viên: {{ course.teacher.username|default:"Chưa cập nhật" }}</p>
                     <p class="course-rating-line">
                         {% if course.rating_count %}
                             <span>Đánh giá:</span>

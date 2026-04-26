@@ -32,6 +32,15 @@ from .permissions import IsTeacher, IsTeacherOrReadOnly, IsTeacherOrOwner, IsEnr
 
 
 # ==================== AUTHENTICATION ====================
+# Helper xác định role trả về cho API auth
+def _resolve_user_role(user):
+    profile = UserProfile.objects.filter(user=user).only('role').first()
+    if profile and profile.role:
+        return profile.role
+    return 'teacher' if user.is_staff else 'student'
+
+
+# API đăng ký tài khoản
 class RegisterAPI(generics.CreateAPIView):
     """Đăng ký tài khoản mới"""
     queryset = User.objects.all()
@@ -44,11 +53,14 @@ class RegisterAPI(generics.CreateAPIView):
         password = request.data.get('password')
         first_name = request.data.get('first_name', '')
         last_name = request.data.get('last_name', '')
-        role = request.data.get('role', 'student')  # 'student' hoặc 'teacher'
+        role = (request.data.get('role', 'student') or 'student').strip().lower()  # 'student' hoặc 'teacher'
+
+        if role not in {'student', 'teacher'}:
+            return Response({'success': False, 'error': 'Role không hợp lệ'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Kiểm tra user đã tồn tại
         if User.objects.filter(username=username).exists():
-            return Response({'error': 'Username đã tồn tại'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'success': False, 'error': 'Username đã tồn tại'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Tạo user mới
         user = User.objects.create_user(
@@ -61,16 +73,22 @@ class RegisterAPI(generics.CreateAPIView):
         
         # Tạo profile
         UserProfile.objects.create(user=user, role=role)
+        if role == 'teacher':
+            user.is_staff = True
+            user.save(update_fields=['is_staff'])
         
         # Tạo token
         Token.objects.create(user=user)
         
         return Response({
+            'success': True,
             'user': UserSerializer(user).data,
+            'role': role,
             'token': Token.objects.get(user=user).key
         }, status=status.HTTP_201_CREATED)
 
 
+# API đăng nhập tài khoản
 class LoginAPI(generics.GenericAPIView):
     """Đăng nhập và lấy token"""
     permission_classes = [permissions.AllowAny]
@@ -81,28 +99,33 @@ class LoginAPI(generics.GenericAPIView):
         
         user = User.objects.filter(username=username).first()
         if not user:
-            return Response({'error': 'Username hoặc password sai'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'success': False, 'error': 'Username hoặc password sai'}, status=status.HTTP_401_UNAUTHORIZED)
         
         if not user.check_password(password):
-            return Response({'error': 'Username hoặc password sai'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'success': False, 'error': 'Username hoặc password sai'}, status=status.HTTP_401_UNAUTHORIZED)
         
         token, _ = Token.objects.get_or_create(user=user)
+        role = _resolve_user_role(user)
         return Response({
+            'success': True,
             'user': UserSerializer(user).data,
+            'role': role,
             'token': token.key
         })
 
 
+# API đăng xuất tài khoản
 class LogoutAPI(generics.GenericAPIView):
     """Đăng xuất (xóa token)"""
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request, *args, **kwargs):
-        request.user.auth_token.delete()
-        return Response({'message': 'Đăng xuất thành công'})
+        Token.objects.filter(user=request.user).delete()
+        return Response({'success': True, 'message': 'Đăng xuất thành công'})
 
 
 # ==================== USER ====================
+# API chi tiết/cập nhật user hiện tại
 class UserDetailAPI(generics.RetrieveUpdateAPIView):
     """Lấy/cập nhật thông tin user"""
     serializer_class = UserDetailSerializer
@@ -112,6 +135,7 @@ class UserDetailAPI(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+# API danh sách users (admin)
 class UserListAPI(generics.ListAPIView):
     """Danh sách users (chỉ admin)"""
     queryset = User.objects.all()
@@ -120,6 +144,7 @@ class UserListAPI(generics.ListAPIView):
 
 
 # ==================== LEVEL ====================
+# API danh sách/tạo level
 class LevelListAPI(generics.ListCreateAPIView):
     """Danh sách/tạo level"""
     queryset = Level.objects.all()
@@ -127,6 +152,7 @@ class LevelListAPI(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
+# API chi tiết level
 class LevelDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa level"""
     queryset = Level.objects.all()
@@ -135,6 +161,7 @@ class LevelDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ==================== GRADE ====================
+# API danh sách/tạo grade
 class GradeListAPI(generics.ListCreateAPIView):
     """Danh sách/tạo grade"""
     queryset = Grade.objects.all()
@@ -142,6 +169,7 @@ class GradeListAPI(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
+# API chi tiết grade
 class GradeDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa grade"""
     queryset = Grade.objects.all()
@@ -150,6 +178,7 @@ class GradeDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ==================== SUBJECT ====================
+# API danh sách/tạo subject
 class SubjectListAPI(generics.ListCreateAPIView):
     """Danh sách/tạo subject"""
     queryset = Subject.objects.all()
@@ -157,6 +186,7 @@ class SubjectListAPI(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
+# API chi tiết subject
 class SubjectDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa subject"""
     queryset = Subject.objects.all()
@@ -165,6 +195,7 @@ class SubjectDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ==================== COURSE ====================
+# API danh sách/tạo khóa học
 class CourseListAPI(generics.ListCreateAPIView):
     """Danh sách/tạo khóa học"""
     queryset = Course.objects.filter(is_published=True)
@@ -178,6 +209,7 @@ class CourseListAPI(generics.ListCreateAPIView):
         serializer.save(teacher=self.request.user)
 
 
+# API chi tiết khóa học
 class CourseDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa khóa học"""
     queryset = Course.objects.all()
@@ -190,6 +222,7 @@ class CourseDetailAPI(generics.RetrieveUpdateDestroyAPIView):
         return CourseDetailSerializer
 
 
+# API khóa học của giảng viên
 class TeacherCoursesAPI(generics.ListAPIView):
     """Danh sách khóa học của giáo viên (bao gồm chưa xuất bản)"""
     serializer_class = CourseSerializer
@@ -200,6 +233,7 @@ class TeacherCoursesAPI(generics.ListAPIView):
 
 
 # ==================== LESSON ====================
+# API danh sách/tạo bài học
 class LessonListAPI(generics.ListCreateAPIView):
     """Danh sách/tạo bài học"""
     serializer_class = LessonSerializer
@@ -215,6 +249,7 @@ class LessonListAPI(generics.ListCreateAPIView):
         serializer.save(course=course)
 
 
+# API chi tiết bài học
 class LessonDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa bài học"""
     serializer_class = LessonDetailSerializer
@@ -223,6 +258,7 @@ class LessonDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ==================== QUIZ ====================
+# API danh sách/tạo quiz theo khóa học
 class QuizListByCourseAPI(generics.ListCreateAPIView):
     """Danh sách/tạo quiz theo khóa học"""
     serializer_class = QuizSerializer
@@ -238,6 +274,7 @@ class QuizListByCourseAPI(generics.ListCreateAPIView):
         serializer.save(course=course)
 
 
+# API chi tiết quiz
 class QuizDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa quiz"""
     queryset = Quiz.objects.all()
@@ -246,6 +283,7 @@ class QuizDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ==================== QUESTION ====================
+# API danh sách/tạo câu hỏi
 class QuestionListByQuizAPI(generics.ListCreateAPIView):
     """Danh sách/tạo câu hỏi theo quiz"""
     serializer_class = QuestionSerializer
@@ -261,6 +299,7 @@ class QuestionListByQuizAPI(generics.ListCreateAPIView):
         serializer.save(quiz=quiz)
 
 
+# API chi tiết câu hỏi
 class QuestionDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa câu hỏi"""
     queryset = Question.objects.all()
@@ -269,6 +308,7 @@ class QuestionDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ==================== CHOICE ====================
+# API danh sách/tạo lựa chọn
 class ChoiceListByQuestionAPI(generics.ListCreateAPIView):
     """Danh sách/tạo lựa chọn theo câu hỏi"""
     serializer_class = ChoiceSerializer
@@ -284,6 +324,7 @@ class ChoiceListByQuestionAPI(generics.ListCreateAPIView):
         serializer.save(question=question)
 
 
+# API chi tiết lựa chọn
 class ChoiceDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     """Chi tiết/cập nhật/xóa lựa chọn"""
     queryset = Choice.objects.all()
@@ -292,6 +333,7 @@ class ChoiceDetailAPI(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ==================== ENROLLMENT ====================
+# API danh sách đăng ký của user
 class EnrollmentListAPI(generics.ListAPIView):
     """Danh sách đăng ký của user"""
     serializer_class = EnrollmentSerializer
@@ -301,6 +343,7 @@ class EnrollmentListAPI(generics.ListAPIView):
         return Enrollment.objects.filter(user=self.request.user)
 
 
+# API chi tiết đăng ký
 class EnrollmentDetailAPI(generics.RetrieveUpdateAPIView):
     """Chi tiết đăng ký"""
     queryset = Enrollment.objects.all()
@@ -308,6 +351,7 @@ class EnrollmentDetailAPI(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 
+# API đăng ký khóa học
 class EnrollCourseAPI(generics.CreateAPIView):
     """Đăng ký khóa học"""
     serializer_class = EnrollmentSerializer
@@ -342,6 +386,7 @@ class EnrollCourseAPI(generics.CreateAPIView):
         )
 
 
+# API danh sách đăng ký theo giảng viên
 class EnrollmentsByTeacherAPI(generics.ListAPIView):
     """Danh sách học viên trong các khóa học của giáo viên"""
     serializer_class = EnrollmentSerializer
@@ -352,6 +397,7 @@ class EnrollmentsByTeacherAPI(generics.ListAPIView):
 
 
 # ==================== USER QUIZ ATTEMPT ====================
+# API bắt đầu làm quiz
 class StartQuizAPI(generics.CreateAPIView):
     """Bắt đầu bài quiz"""
     serializer_class = UserQuizAttemptSerializer
@@ -378,6 +424,7 @@ class StartQuizAPI(generics.CreateAPIView):
         )
 
 
+# API chi tiết và nộp attempt
 class UserQuizAttemptAPI(generics.RetrieveUpdateAPIView):
     """Chi tiết attempt, submit đáp án"""
     queryset = UserQuizAttempt.objects.all()
@@ -416,6 +463,7 @@ class UserQuizAttemptAPI(generics.RetrieveUpdateAPIView):
         return Response(UserQuizAttemptDetailSerializer(attempt).data)
 
 
+# API lịch sử attempt của user
 class UserAttemptListAPI(generics.ListAPIView):
     """Danh sách lần làm quiz của user"""
     serializer_class = UserQuizAttemptSerializer
@@ -425,6 +473,7 @@ class UserAttemptListAPI(generics.ListAPIView):
         return UserQuizAttempt.objects.filter(user=self.request.user)
 
 
+# API kết quả quiz theo giảng viên
 class QuizResultsByTeacherAPI(generics.ListAPIView):
     """Danh sách kết quả quiz của học viên cho các khóa học của giáo viên"""
     serializer_class = UserQuizAttemptSerializer
@@ -435,6 +484,7 @@ class QuizResultsByTeacherAPI(generics.ListAPIView):
 
 
 # ==================== NOTIFICATION ====================
+# API danh sách thông báo
 class NotificationListAPI(generics.ListAPIView):
     """Danh sách thông báo của user"""
     serializer_class = NotificationSerializer
@@ -444,6 +494,7 @@ class NotificationListAPI(generics.ListAPIView):
         return Notification.objects.filter(user=self.request.user).order_by('-created_at')
 
 
+# API đánh dấu thông báo đã đọc
 class NotificationMarkAsReadAPI(generics.UpdateAPIView):
     """Đánh dấu thông báo đã đọc"""
     queryset = Notification.objects.all()
@@ -458,6 +509,7 @@ class NotificationMarkAsReadAPI(generics.UpdateAPIView):
 
 
 # ==================== LESSON COMMENTS ====================
+# API bình luận bài học
 class LessonCommentViewSet(viewsets.ModelViewSet):
     """API ViewSet cho Lesson Comments"""
     permission_classes = [permissions.IsAuthenticated, IsEnrolledOrTeacher]
@@ -521,6 +573,7 @@ class LessonCommentViewSet(viewsets.ModelViewSet):
 
 
 # ==================== COURSE COMMENTS ====================
+# API bình luận khóa học
 class CourseCommentViewSet(viewsets.ModelViewSet):
     """API ViewSet cho Course Comments"""
     permission_classes = [permissions.IsAuthenticated, IsEnrolledOrTeacher]

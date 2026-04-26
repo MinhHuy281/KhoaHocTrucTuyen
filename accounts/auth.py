@@ -16,18 +16,12 @@ class SeparateSessionAuth:
     @staticmethod
     def login_user(request, user):
         """Đăng nhập cho USER (học viên)"""
-        # Tránh giữ đồng thời session teacher cũ gây nhầm ngữ cảnh user.
-        if SeparateSessionAuth.TEACHER_SESSION_KEY in request.session:
-            del request.session[SeparateSessionAuth.TEACHER_SESSION_KEY]
         request.session[SeparateSessionAuth.USER_SESSION_KEY] = user.id
         request.session.modified = True
     
     @staticmethod
     def login_teacher(request, user):
         """Đăng nhập cho TEACHER (giảng viên)"""
-        # Tránh giữ đồng thời session user cũ gây nhầm ngữ cảnh teacher.
-        if SeparateSessionAuth.USER_SESSION_KEY in request.session:
-            del request.session[SeparateSessionAuth.USER_SESSION_KEY]
         request.session[SeparateSessionAuth.TEACHER_SESSION_KEY] = user.id
         request.session.modified = True
     

@@ -84,38 +84,40 @@
             </div>
 
             {% if data.attempts %}
-                <table class="attempt-table">
-                    <thead>
-                        <tr>
-                            <th>Học viên</th>
-                            <th>Thời gian làm</th>
-                            <th>Điểm</th>
-                            <th>Đúng/Sai</th>
-                            <th>Trạng thái</th>
-                            <th>Chi tiết</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for attempt in data.attempts %}
+                <div class="attempt-table-wrap">
+                    <table class="attempt-table">
+                        <thead>
                             <tr>
-                                <td>{{ attempt.user.username }}</td>
-                                <td>{{ attempt.finished_at|date:"d/m/Y H:i" }}</td>
-                                <td><strong>{{ attempt.percentage|floatformat:1 }}%</strong></td>
-                                <td>{{ attempt.correct_answers }}/{{ attempt.correct_answers|add:attempt.wrong_answers }}</td>
-                                <td>
-                                    {% if attempt.completed %}
-                                        <span class="badge-success">Hoàn thành</span>
-                                    {% else %}
-                                        <span class="badge-warning">Chưa hoàn thành</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{% url 'teacher_attempt_detail' attempt.id %}" class="btn-view-detail">Xem →</a>
-                                </td>
+                                <th>Học viên</th>
+                                <th>Thời gian làm</th>
+                                <th>Điểm</th>
+                                <th>Đúng/Sai</th>
+                                <th>Trạng thái</th>
+                                <th>Chi tiết</th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {% for attempt in data.attempts %}
+                                <tr>
+                                    <td>{{ attempt.user.username }}</td>
+                                    <td>{{ attempt.finished_at|date:"d/m/Y H:i" }}</td>
+                                    <td><strong>{{ attempt.percentage|floatformat:1 }}%</strong></td>
+                                    <td>{{ attempt.correct_answers }}/{{ attempt.correct_answers|add:attempt.wrong_answers }}</td>
+                                    <td>
+                                        {% if attempt.completed %}
+                                            <span class="badge-success">Hoàn thành</span>
+                                        {% else %}
+                                            <span class="badge-warning">Chưa hoàn thành</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'teacher_attempt_detail' attempt.id %}" class="btn-view-detail">Xem →</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
                 <p>Chưa có học viên nào làm bài này.</p>
             {% endif %}
@@ -161,7 +163,12 @@
 .quiz-table,
 .attempt-table {
     width: 100%;
+    min-width: 760px;
     border-collapse: collapse;
+}
+
+.attempt-table-wrap {
+    overflow-x: auto;
 }
 
 .quiz-table th,
@@ -264,6 +271,10 @@
     .action-buttons,
     .section-actions {
         flex-wrap: wrap;
+    }
+
+    .btn-back {
+        width: 100%;
     }
 }
 </style>

@@ -153,6 +153,7 @@
 
 .quiz-table {
     width: 100%;
+    min-width: 760px;
     border-collapse: collapse;
     background-color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -311,14 +312,20 @@
     }
 
     .action-buttons {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
         gap: 5px;
     }
 
     .btn-edit, .btn-delete, .btn-view {
+        width: 36px;
+        justify-content: center;
+        padding-left: 0;
+    }
+
+    .btn-secondary {
         width: 100%;
-        justify-content: flex-start;
-        padding-left: 10px;
+        text-align: center;
     }
 }
 </style>

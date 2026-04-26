@@ -344,3 +344,26 @@
 .pagination-item .pagination-ctrl {
     padding: 0 16px;
 }
+
+@media (max-width: 992px) {
+    .teacher-navbar .menu {
+        white-space: normal;
+        overflow: visible;
+        gap: 6px;
+    }
+
+    .teacher-navbar .menu a {
+        width: 100%;
+        text-align: left;
+        font-size: 13px;
+        padding: 10px 12px;
+    }
+
+    .teacher-navbar .teacher-navbar-actions .user-box {
+        width: 100%;
+    }
+
+    .teacher-navbar .teacher-noti {
+        margin-right: 8px;
+    }
+}

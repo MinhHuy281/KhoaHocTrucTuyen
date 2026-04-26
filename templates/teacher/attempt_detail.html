@@ -25,6 +25,7 @@ display:flex;
 gap:40px;
 margin-top:20px;
 align-items:center;
+flex-wrap:wrap;
 }
 
 .percentage-circle{
@@ -69,6 +70,8 @@ background:#fff5f5;
 .choice-item{
 display:flex;
 justify-content:space-between;
+align-items:flex-start;
+gap:8px;
 padding:10px;
 margin:6px 0;
 background:white;
@@ -183,7 +186,15 @@ background:white;
 display:block;
 }
 
+.question-review h5 {
+word-break: break-word;
+}
+
 @media (max-width: 768px){
+.container-teacher{
+padding:18px;
+}
+
 .slide-head{
 flex-direction:column;
 align-items:stretch;
@@ -195,6 +206,39 @@ flex:1;
 
 .slide-frame{
 height:360px;
+}
+
+.attempt-header{
+padding:18px;
+}
+
+.score-display{
+gap:14px;
+justify-content:space-between;
+}
+
+.percentage-circle{
+width:88px;
+height:88px;
+font-size:28px;
+}
+
+.score-item{
+min-width:84px;
+}
+
+.score-item .value{
+font-size:24px;
+}
+
+.choice-item{
+flex-direction:column;
+}
+
+.choice-item > div:last-child{
+display:flex;
+flex-wrap:wrap;
+gap:6px;
 }
 }
 
