@@ -14,6 +14,9 @@
 
         <form method="POST" class="auth-form">
             {% csrf_token %}
+            {% if next_url %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+            {% endif %}
 
             <input type="text" name="username" placeholder="Tên đăng nhập" class="auth-input" required>
 
@@ -46,7 +49,7 @@
         {% endif %}
 
         <div class="auth-link">
-            <a href="{% url 'teacher_login' %}">Đăng nhập giảng viên</a> |
+            <a href="{% url 'teacher_login' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}">Đăng nhập giảng viên</a> |
             <a href="{% url 'password_reset' %}">Quên mật khẩu?</a> | 
             Chưa có tài khoản học viên? <a href="{% url 'register' %}">Đăng ký học viên</a><br>
             Đăng ký giảng viên? <a href="{% url 'teacher_register' %}">Đăng ký giảng viên</a>

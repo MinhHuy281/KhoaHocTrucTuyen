@@ -92,6 +92,7 @@
                 <div>Môn: <strong>{{ course.subject.name|default:"-" }}</strong></div>
                 <div>Lớp: <strong>{{ course.grade.name|default:"-" }}</strong></div>
                 <div>Cấp: <strong>{{ course.level.name|default:"-" }}</strong></div>
+                <div>Giảng viên: <strong>{{ course.teacher.username|default:"Chưa cập nhật" }}</strong></div>
             </div>
 
             <div class="price-row">
@@ -103,16 +104,6 @@
                     <div class="enrolled enrolled--success">
                         ✅ Đã mở khóa nội dung khóa học
                     </div>
-
-                    {% if first_lesson %}
-                        <a href="{% url 'lesson_view' first_lesson.id %}" class="course-cta course-cta--free" style="margin-top: 12px;">
-                            <span class="course-cta__icon">📖</span>
-                            <span>
-                                <strong>Mở bài học đầu tiên</strong>
-                                <small>Xem video, Canva và nội dung bài học</small>
-                            </span>
-                        </a>
-                    {% endif %}
 
                 {% elif course.price == 0 %}
                     <a href="{% if first_lesson %}{% url 'lesson_view' first_lesson.id %}{% else %}#{% endif %}" class="course-cta course-cta--free">
@@ -155,6 +146,7 @@
 
                     <div class="lesson-info">
                         <h3>{{ lesson.title }}</h3>
+                        <p class="lesson-teacher">Giảng viên đăng: {{ course.teacher.username|default:"Chưa cập nhật" }}</p>
 
                         {% if lesson.video_file %}
                             <span class="video-tag">

@@ -13,6 +13,7 @@
         <div>
             <h1>Bài tập ôn luyện</h1>
             <p class="quiz-subtitle">{{ course.title }}</p>
+            <p class="quiz-subtitle">Giảng viên: {{ course.teacher.username|default:"Chưa cập nhật" }}</p>
         </div>
         <a href="{% url 'course_detail' course.id %}" class="back-link">Quay lại khóa học</a>
     </div>
@@ -24,6 +25,7 @@
                     <div class="quiz-badge">Bài {{ forloop.counter }}</div>
                     <h3>{{ quiz.title }}</h3>
                     <div class="quiz-meta">
+                        <span>👨‍🏫 {{ course.teacher.username|default:"Chưa cập nhật" }}</span>
                         <span>⏱ {{ quiz.minutes }} phút</span>
                         <span>🔁 Tối đa 3 lần làm</span>
                     </div>

@@ -1,30 +1,190 @@
 {% extends "teacher/teacher_base.html" %}
+{% load static %}
 
 {% block title %}{{ lesson.title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+.teacher-lesson-page {
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+.teacher-lesson-head {
+    margin-bottom: 16px;
+}
+
+.teacher-lesson-head h1 {
+    margin: 0 0 8px;
+    color: #0f172a;
+}
+
+.teacher-lesson-meta {
+    color: #475569;
+    font-size: 0.95rem;
+}
+
+.teacher-lesson-box {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.teacher-lesson-content {
+    white-space: pre-wrap;
+    line-height: 1.65;
+    color: #334155;
+}
+
+.teacher-comment-list {
+    display: grid;
+    gap: 12px;
+}
+
+.teacher-comment-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    padding: 14px;
+}
+
+.teacher-comment-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.teacher-comment-user {
+    margin: 0;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.teacher-comment-time {
+    color: #64748b;
+    font-size: 0.86rem;
+}
+
+.teacher-comment-reply {
+    margin-top: 10px;
+    border-left: 3px solid #bfdbfe;
+    padding: 8px 10px;
+    background: #f8fbff;
+    border-radius: 8px;
+}
+
+.teacher-comment-reply-title {
+    margin: 0 0 4px;
+    font-weight: 600;
+    color: #1e3a8a;
+    font-size: 0.9rem;
+}
+
+.teacher-reply-form {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.teacher-reply-form textarea {
+    width: 100%;
+    min-height: 90px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.teacher-reply-form button {
+    width: fit-content;
+    border: 0;
+    border-radius: 10px;
+    background: #1d4ed8;
+    color: #fff;
+    font-weight: 700;
+    padding: 9px 14px;
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="teacher-lesson-page">
+    <div class="teacher-lesson-head">
+        <h1>{{ lesson.title }}</h1>
+        <div class="teacher-lesson-meta">
+            Khóa học: <strong>{{ course.title }}</strong>
+        </div>
+    </div>
 
-<div class="container">
+    <div class="teacher-lesson-box">
+        {% if video_id %}
+            <iframe width="100%" height="500" src="https://www.youtube-nocookie.com/embed/{{ video_id }}?rel=0" frameborder="0" allowfullscreen></iframe>
+        {% elif lesson.video_file %}
+            <video controls style="width:100%; border-radius: 10px;">
+                <source src="{{ lesson.video_file.url }}" type="video/mp4">
+                Trình duyệt không hỗ trợ video.
+            </video>
+        {% else %}
+            <p style="margin:0; color:#64748b;">Bài học này chưa có video.</p>
+        {% endif %}
+    </div>
 
-    <h2>{{ lesson.title }}</h2>
-
-    <!-- VIDEO -->
-    {% if video_id %}
-        <iframe width="100%" height="500"
-            src="https://www.youtube-nocookie.com/embed/{{ video_id }}"
-            frameborder="0" allowfullscreen>
-        </iframe>
+    {% if lesson.slide_file %}
+    <div class="teacher-lesson-box">
+        <a href="{{ lesson.slide_file.url }}" target="_blank" rel="noopener noreferrer" class="btn-enroll">Mở file slide</a>
+    </div>
+    {% elif lesson.slide_url %}
+    <div class="teacher-lesson-box">
+        <a href="{{ lesson.slide_url }}" target="_blank" rel="noopener noreferrer" class="btn-enroll">Mở liên kết slide</a>
+    </div>
     {% endif %}
 
-    <hr>
+    <div class="teacher-lesson-box">
+        <h3 style="margin-top:0;">Nội dung bài học</h3>
+        <div class="teacher-lesson-content">{{ lesson.content }}</div>
+    </div>
 
-    <!-- NỘI DUNG FULL -->
-    <p>{{ lesson.content }}</p>
+    <div class="teacher-lesson-box">
+        <h3 style="margin-top:0;">Bình luận học viên ({{ total_ratings }} bình luận, {{ average_rating }} sao)</h3>
 
-    <br>
+        <div class="teacher-comment-list">
+            {% for comment in comments %}
+                <article class="teacher-comment-card">
+                    <div class="teacher-comment-head">
+                        <p class="teacher-comment-user">{{ comment.user.username }}</p>
+                        <span class="teacher-comment-time">{{ comment.created_at|date:"d/m/Y H:i" }}{% if comment.rating %} • {{ comment.rating }} sao{% endif %}</span>
+                    </div>
 
-    <a href="javascript:history.back()" class="btn-secondary">⬅ Quay lại</a>
+                    <p>{{ comment.content }}</p>
 
+                    {% for reply in comment.replies.all %}
+                        <div class="teacher-comment-reply">
+                            <p class="teacher-comment-reply-title">{{ reply.user.username }} - {{ reply.created_at|date:"d/m/Y H:i" }}</p>
+                            <p style="margin:0;">{{ reply.content }}</p>
+                        </div>
+                    {% endfor %}
+
+                    <form method="post" class="teacher-reply-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reply_comment">
+                        <input type="hidden" name="comment_id" value="{{ comment.id }}">
+                        <textarea name="reply_content" maxlength="1000" placeholder="Nhắn phản hồi cho học viên..." required></textarea>
+                        <button type="submit">Gửi phản hồi</button>
+                    </form>
+                </article>
+            {% empty %}
+                <article class="teacher-comment-card">
+                    <p style="margin:0; color:#64748b;">Chưa có bình luận nào cho bài học này.</p>
+                </article>
+            {% endfor %}
+        </div>
+    </div>
+
+    <a href="{% url 'teacher_course_detail' course.id %}" class="btn-secondary">⬅ Quay lại chi tiết khóa học</a>
 </div>
 
 {% endblock %}

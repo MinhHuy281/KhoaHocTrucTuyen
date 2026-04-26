@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.db.models import Avg, Count
 from django.utils import timezone
 from .models import *
-from .models import Course, Lesson, Enrollment, Level, Grade, Subject, Quiz, Question, Choice, UserQuizAttempt, Notification, LessonComment, CourseComment
+from .models import Course, Lesson, Enrollment, Level, Grade, Subject, Quiz, Question, Choice, UserQuizAttempt, Notification, LessonComment, CourseComment, ContactRequest
 
 # ================= LEVEL, GRADE, SUBJECT =================
 @admin.register(Level)
@@ -207,6 +207,30 @@ class CourseCommentAdmin(admin.ModelAdmin):
     list_filter = ('rating', 'created_at', 'course')
     search_fields = ('course__title', 'user__username', 'content')
     readonly_fields = ('created_at',)
+
+
+@admin.register(ContactRequest)
+class ContactRequestAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'phone', 'email', 'subject', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('full_name', 'phone', 'email', 'subject', 'message')
+    readonly_fields = ('created_at', 'updated_at', 'user')
+    list_editable = ('status',)
+
+    fieldsets = (
+        ('👤 Người gửi', {
+            'fields': ('user', 'full_name', 'phone', 'email')
+        }),
+        ('📝 Nội dung tư vấn', {
+            'fields': ('subject', 'message')
+        }),
+        ('⚙️ Xử lý', {
+            'fields': ('status', 'admin_note')
+        }),
+        ('⏰ Thời gian', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
 
 # Customize admin site header
 admin.site.site_header = "📚 KhoaHocTrucTuyen Admin"

@@ -17,11 +17,16 @@
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar app-navbar teacher-navbar">
+<nav class="navbar app-navbar teacher-navbar" id="teacherNavbar">
     <div class="container nav-flex">
         <a href="{% url 'teacher_dashboard' %}" class="logo">KhoaHocTrucTuyen</a>
+
+        <button type="button" class="mobile-menu-toggle" id="teacherMobileMenuToggle" aria-expanded="false" aria-controls="teacherMenu">
+            <i class="bi bi-list"></i>
+            <span>Menu</span>
+        </button>
         
-        <div class="menu">
+        <div class="menu" id="teacherMenu">
             <a href="{% url 'teacher_dashboard' %}">Trang chủ</a>
             <a href="{% url 'teacher_courses' %}">Quản lý khóa học</a>
             <a href="{% url 'create_courses' %}">Tạo khóa học</a>
@@ -30,7 +35,7 @@
             <a href="{% url 'teacher_students' %}">Học viên</a> 
         </div>
 
-        <div class="teacher-navbar-actions">
+        <div class="teacher-navbar-actions" id="teacherNavbarActions">
             <form action="{% url 'teacher_courses' %}" method="GET" class="search-box">
                 <input type="text" name="q" placeholder="Tìm khóa học của bạn...">
                 <button type="submit">🔍</button>
@@ -102,6 +107,7 @@
 
                                 <form action="{% url 'logout' %}" method="post" class="logout-form user-logout-form">
                                     {% csrf_token %}
+                                    <input type="hidden" name="scope" value="teacher">
                                     <button type="submit" class="logout-btn user-logout-btn">
                                         <i class="bi bi-box-arrow-right"></i>
                                         Đăng xuất
@@ -238,6 +244,23 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('form').forEach((form) => {
         form.addEventListener('submit', syncCsrfTokenForForms);
     });
+
+    const teacherNavbar = document.getElementById('teacherNavbar');
+    const teacherMenuToggle = document.getElementById('teacherMobileMenuToggle');
+    if (teacherNavbar && teacherMenuToggle) {
+        teacherMenuToggle.addEventListener('click', function () {
+            const willOpen = !teacherNavbar.classList.contains('nav-open');
+            teacherNavbar.classList.toggle('nav-open');
+            teacherMenuToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 992) {
+                teacherNavbar.classList.remove('nav-open');
+                teacherMenuToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
 });
 </script>
 {% endblock %}
