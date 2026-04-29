@@ -879,6 +879,7 @@ footer {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 28px;
+  align-items: stretch;
 }
 
 .teacher-container .course-grid {
@@ -896,6 +897,20 @@ footer {
 
 .course-link {
   display: block;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.course-link:visited,
+.course-link:hover,
+.course-link:active {
+  text-decoration: none;
+  color: inherit;
+}
+
+.course-link * {
+  text-decoration: none;
 }
 
 .course-card {
@@ -904,6 +919,9 @@ footer {
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   transition: all 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .course-card:hover {
@@ -942,12 +960,16 @@ footer {
 
 .course-body {
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .course-title {
   font-size: 1.4rem;
   margin-bottom: 0.8rem;
   color: #1e293b;
+  min-height: 56px;
 }
 
 .course-desc {
@@ -955,6 +977,7 @@ footer {
   font-size: 0.95rem;
   margin-bottom: 1.2rem;
   line-height: 1.5;
+  min-height: 68px;
 }
 
 .course-meta {
@@ -963,6 +986,35 @@ footer {
   font-size: 0.9rem;
   color: #64748b;
   margin-bottom: 1.5rem;
+}
+
+.course-kpis {
+  margin-bottom: 13px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.course-kpis span {
+  min-height: 56px;
+  border-radius: 12px;
+  border: 1px solid #d7e3f5;
+  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  padding: 8px;
+  color: #26406d;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+}
+
+.course-kpis i {
+  color: #2357ba;
+  font-size: 14px;
 }
 
 .course-rating-inline {
@@ -1002,6 +1054,7 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: auto;
 }
 
 .price {

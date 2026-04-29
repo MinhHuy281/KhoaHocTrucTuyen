@@ -39,16 +39,19 @@ from accounts.decorators import teacher_required, student_required
 COMMENT_META_TAG = "[[COMMENT_META]]"
 
 
+# URL điều hướng sau thanh toán
 def get_payment_success_url(enrollment):
     """Chuyển hướng về trang chi tiết khóa học sau khi thanh toán thành công."""
     return reverse('course_detail', args=[enrollment.course_id])
 
 
+# Mã tham chiếu chuyển khoản
 def get_payment_reference(enrollment):
     # Unique transfer reference embedded into QR content.
     return f"PAYE{enrollment.id}"
 
 
+# Tạo thông báo doanh thu sau thanh toán
 def _create_payment_notification(enrollment):
     course_price = Decimal(str(enrollment.course.price or 0))
     admin_share = (course_price * Decimal('0.10')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
@@ -76,6 +79,7 @@ def _create_payment_notification(enrollment):
         )
 
 
+# Tách nội dung chuyển khoản từ payload webhook
 def _extract_transfer_content(payload):
     if not isinstance(payload, dict):
         return ""
@@ -100,6 +104,7 @@ def _extract_transfer_content(payload):
     return ""
 
 
+# Tách số tiền chuyển khoản từ payload webhook
 def _extract_transfer_amount(payload):
     if not isinstance(payload, dict):
         return None
@@ -127,6 +132,7 @@ def _extract_transfer_amount(payload):
     return None
 
 
+# Tìm enrollment theo nội dung chuyển khoản
 def _find_enrollment_from_transfer_content(transfer_content):
     if not transfer_content:
         return None
@@ -150,6 +156,7 @@ def _find_enrollment_from_transfer_content(transfer_content):
     return None
 
 
+# Ghép lịch sử phản hồi theo mốc thời gian
 def append_reply_history(existing_reply, new_reply, replied_at):
     existing_text = (existing_reply or '').strip()
     new_text = (new_reply or '').strip()
@@ -163,11 +170,13 @@ def append_reply_history(existing_reply, new_reply, replied_at):
     return f"{existing_text}\n\n{entry}"
 
 
+# Đóng gói meta vào nội dung thông báo bình luận
 def build_comment_notification_message(base_message, meta):
     payload = urlencode(meta)
     return f"{base_message} {COMMENT_META_TAG}{payload}"
 
 
+# Tách nội dung và meta từ thông báo bình luận
 def parse_comment_notification_message(raw_message):
     message = raw_message or ""
     if COMMENT_META_TAG not in message:
@@ -185,6 +194,7 @@ def parse_comment_notification_message(raw_message):
     return content, meta
 
 
+# Suy luận metadata từ thông báo cũ (teacher side)
 def infer_comment_meta_from_legacy_message(message, teacher):
     """Infer notification metadata from old plain-text comment messages."""
     text = (message or '').strip()
@@ -320,6 +330,7 @@ def infer_comment_meta_from_legacy_message(message, teacher):
     return None
 
 
+# Suy luận metadata từ thông báo cũ (student side)
 def infer_student_comment_meta_from_legacy_message(message, student):
     """Infer student-side reply metadata from old plain-text teacher notifications."""
     text = (message or '').strip()
@@ -380,6 +391,7 @@ def infer_student_comment_meta_from_legacy_message(message, student):
     return None
 
 
+# Đảm bảo bảng bình luận tồn tại khi thiếu migration
 def ensure_comment_tables():
     """Create comment tables and missing reply columns if migrations cannot be applied."""
     try:
@@ -425,6 +437,7 @@ def ensure_comment_tables():
         return False
 
 
+# Gửi thông báo cho giảng viên khi học viên bình luận
 def notify_teacher_for_comment(*, course, actor, rating, content, comment_kind, comment_id, lesson=None):
     """Push a notification to the course teacher when a student comments/rates."""
     teacher = course.teacher
@@ -454,6 +467,7 @@ def notify_teacher_for_comment(*, course, actor, rating, content, comment_kind, 
     )
 
 
+# Gửi thông báo cho giảng viên khi học viên phản hồi
 def notify_teacher_for_user_reply(*, course, actor, reply_text, comment_kind, comment_id, lesson=None):
     teacher = course.teacher
     if not teacher or teacher == actor:
@@ -478,6 +492,7 @@ def notify_teacher_for_user_reply(*, course, actor, reply_text, comment_kind, co
     )
 
 
+# Gửi thông báo cho chủ bình luận khi có phản hồi
 def notify_comment_owner_for_reply(*, parent_comment, actor, reply_text, comment_kind, lesson=None, course=None):
     recipient = parent_comment.user
     if not recipient or recipient == actor:
@@ -508,6 +523,7 @@ def notify_comment_owner_for_reply(*, parent_comment, actor, reply_text, comment
     )
 
 
+# Kiểm tra mật khẩu đủ mạnh
 def is_strong_password(password):
     """Yêu cầu mật khẩu mạnh: >=8 ký tự, có hoa/thường/số/ký tự đặc biệt."""
     if len(password) < 8:
@@ -523,6 +539,7 @@ def is_strong_password(password):
     return True
 
 
+# Lấy URL chuyển hướng an toàn sau đăng nhập
 def _get_safe_next_url(request):
     next_url = (request.POST.get('next') or request.GET.get('next') or '').strip()
     if not next_url:
@@ -534,6 +551,7 @@ def _get_safe_next_url(request):
     return ''
 
 
+# Phân trang queryset theo query param
 def paginate_request_queryset(request, queryset, per_page=6, page_param='page'):
     paginator = Paginator(queryset, per_page)
     page_number = request.GET.get(page_param)
@@ -546,6 +564,7 @@ def paginate_request_queryset(request, queryset, per_page=6, page_param='page'):
     return page_obj, query_string
 
 
+# Chuẩn hóa URL slide để embed/tải xuống
 def build_slide_urls(raw_url):
     """Chuan hoa link slide de uu tien embed truc tiep va co link tai."""
     if not raw_url:
@@ -624,6 +643,8 @@ def index(request):
         Course.objects
         .select_related('teacher', 'subject', 'grade', 'level')
         .annotate(
+            lessons_count=Count('lessons', distinct=True),
+            quizzes_count=Count('quizzes', distinct=True),
             avg_rating=Avg(
                 'comments__rating',
                 filter=Q(comments__parent_comment__isnull=True)
@@ -653,6 +674,8 @@ def courses(request):
         Course.objects
         .select_related('teacher', 'subject', 'grade', 'level')
         .annotate(
+            lessons_count=Count('lessons', distinct=True),
+            quizzes_count=Count('quizzes', distinct=True),
             avg_rating=Avg(
                 'comments__rating',
                 filter=Q(comments__parent_comment__isnull=True)
@@ -762,6 +785,7 @@ def teachers_statistics(request):
     })
 
 
+# Gửi yêu cầu liên hệ
 def contact_request(request):
     initial_data = {
         'full_name': '',
@@ -1464,6 +1488,7 @@ def logout_view(request):
 
 
 @student_required
+# Hồ sơ học viên
 def user_profile(request):
     user = request.current_user
     profile, _ = UserProfile.objects.get_or_create(
@@ -1548,6 +1573,7 @@ def user_profile(request):
 
 # === PHẦN ÔN LUYỆN (QUIZ) ===
 @student_required
+# Danh sách bài ôn luyện theo khóa học
 def quiz_list(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
@@ -1569,6 +1595,7 @@ def quiz_list(request, course_id):
 
 
 @student_required
+# Bắt đầu làm bài ôn luyện
 def start_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     course = quiz.course
@@ -1600,6 +1627,7 @@ def start_quiz(request, quiz_id):
     return redirect('take_quiz', attempt_id=attempt.id)
 
 @student_required
+# Làm bài ôn luyện
 def take_quiz(request, attempt_id):
     attempt = get_object_or_404(UserQuizAttempt, id=attempt_id, user=request.user)
     quiz = attempt.quiz
@@ -1745,6 +1773,7 @@ def build_teacher_daily_report_context(request, teacher):
     }
 
 @teacher_required
+# Trang chủ giảng viên
 def teacher_dashboard(request):
     if not request.user.is_staff:
         return redirect('/')
@@ -2115,23 +2144,24 @@ def quiz_result(request, attempt_id):
 @student_required
 # Danh sách ôn luyện tổng hợp
 def quiz_list_all(request):
-    # Chỉ hiển thị bài ôn luyện của các khóa đã được duyệt học.
-    enrolled_courses = Course.objects.filter(
-        enrollments__user=request.current_user,
-        enrollments__status='approved'
-    ).distinct()
-
+    # Hiển thị quiz của:
+    # 1) Khóa miễn phí (ai cũng làm được)
+    # 2) Khóa có phí mà user đã đăng ký (pending/paid/approved)
     quizzes = (
         Quiz.objects
         .select_related('course', 'course__teacher')
-        .filter(course__in=enrolled_courses)
+        .filter(
+            Q(course__is_free=True)
+            | Q(course__price=0)
+            | Q(course__enrollments__user=request.current_user)
+        )
         .order_by('-created_at')
         .distinct()
     )
     page_obj, query_string = paginate_request_queryset(request, quizzes, per_page=6)
 
     if not quizzes.exists():
-        messages.info(request, 'Hiện chưa có bài ôn luyện khả dụng cho các khóa bạn đã mở.')
+        messages.info(request, 'Hiện chưa có bài ôn luyện khả dụng từ khóa miễn phí hoặc các khóa bạn đã đăng ký.')
 
     return render(request, 'quiz_list_all.html', {
         'quizzes': page_obj,
@@ -2282,6 +2312,7 @@ def teacher_course_detail(request, id):
 
 
 @teacher_required
+# Chi tiết bài học (teacher)
 def teacher_lesson_view(request, lesson_id):
     teacher = request.current_teacher
     lesson = get_object_or_404(
@@ -2825,6 +2856,7 @@ def create_quiz(request, id):
 
 
 @student_required
+# Thanh toán khóa học
 def payment(request, enrollment_id):
     enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user)
     success_url = get_payment_success_url(enrollment)
