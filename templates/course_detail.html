@@ -102,17 +102,13 @@
 
                 {% if approved %}
                     <div class="enrolled enrolled--success">
-                        ✅ Đã mở khóa nội dung khóa học
+                        ✅ Khóa học đã đăng ký
                     </div>
 
                 {% elif course.price == 0 %}
-                    <a href="{% if first_lesson %}{% url 'lesson_view' first_lesson.id %}{% else %}#{% endif %}" class="course-cta course-cta--free">
-                        <span class="course-cta__icon">✨</span>
-                        <span>
-                            <strong>Vào học ngay</strong>
-                            <small>Khóa học miễn phí</small>
-                        </span>
-                    </a>
+                    <div class="enrolled enrolled--success">
+                        ✅ Khóa học đã đăng ký
+                    </div>
 
                 {% elif pending %}
                     <div class="enrolled enrolled--pending">⏳ Đang chờ thanh toán</div>

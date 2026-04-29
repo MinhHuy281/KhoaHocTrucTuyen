@@ -69,42 +69,49 @@
     
     <div class="course-grid">
       {% for course in courses %}
-        <div class="course-card">
-          <div class="course-thumbnail">
-            {% if course.image %}
-              <img src="{{ course.image.url }}" alt="{{ course.title }}" loading="lazy">
-            {% else %}
-              <div class="no-image-placeholder">
-                <span>Chưa có ảnh</span>
-              </div>
-            {% endif %}
-            <div class="course-overlay">
-              <span class="course-level">{{ course.level }}</span>
-            </div>
-          </div>
-          <div class="course-body">
-            <h3 class="course-title">{{ course.title }}</h3>
-            <p class="course-desc">{{ course.description|truncatewords:20 }}</p>
-            <div class="course-meta">
-              <span>Môn: {{ course.subject }}</span>
-              <span>Lớp: {{ course.grade }}</span>
-              <span>Giảng viên: {{ course.teacher.username|default:"Chưa cập nhật" }}</span>
-            </div>
-            <div class="course-rating-inline">
-              {% if course.rating_count %}
-                <div class="rating-stars" style="--rating: {{ course.avg_rating|rating_css }};" aria-label="{{ course.avg_rating|floatformat:1 }} trên 5 sao"></div>
-                <span>{{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }} đánh giá)</span>
+        <a href="{% url 'course_detail' course.id %}" class="course-link">
+          <div class="course-card">
+            <div class="course-thumbnail">
+              {% if course.image %}
+                <img src="{{ course.image.url }}" alt="{{ course.title }}" loading="lazy">
               {% else %}
-                <div class="rating-stars" style="--rating: 0;" aria-label="0 trên 5 sao"></div>
-                <span>0.0/5 (0 đánh giá)</span>
+                <div class="no-image-placeholder">
+                  <span>Chưa có ảnh</span>
+                </div>
               {% endif %}
+              <div class="course-overlay">
+                <span class="course-level">{{ course.level }}</span>
+              </div>
             </div>
-            <div class="course-footer">
-              <span class="price">{{ course.price|format_vnd }} VNĐ</span>
-              <a href="{% url 'course_detail' course.id %}" class="btn-detail">Xem chi tiết</a>
+            <div class="course-body">
+              <h3 class="course-title">{{ course.title }}</h3>
+              <p class="course-desc">{{ course.description|truncatewords:20 }}</p>
+              <div class="course-meta">
+                <span>Môn: {{ course.subject }}</span>
+                <span>Lớp: {{ course.grade }}</span>
+                <span>Cấp: {{ course.level }}</span>
+              </div>
+              <div class="course-kpis">
+                <span><i class="bi bi-journal-text"></i> {{ course.lessons_count }} bài học</span>
+                <span><i class="bi bi-person-badge"></i> {{ course.teacher.username|default:"Chưa cập nhật" }}</span>
+                <span><i class="bi bi-clipboard-check"></i> {{ course.quizzes_count }} quiz</span>
+              </div>
+              <div class="course-rating-inline">
+                {% if course.rating_count %}
+                  <div class="rating-stars" style="--rating: {{ course.avg_rating|rating_css }};" aria-label="{{ course.avg_rating|floatformat:1 }} trên 5 sao"></div>
+                  <span>{{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }} đánh giá)</span>
+                {% else %}
+                  <div class="rating-stars" style="--rating: 0;" aria-label="0 trên 5 sao"></div>
+                  <span>0.0/5 (0 đánh giá)</span>
+                {% endif %}
+              </div>
+              <div class="course-footer">
+                <span class="price">{{ course.price|format_vnd }} VNĐ</span>
+                <span class="btn-detail">Xem chi tiết</span>
+              </div>
             </div>
           </div>
-        </div>
+        </a>
       {% empty %}
         <p class="no-data">Chưa có khóa học nổi bật. Hãy khám phá thêm!</p>
       {% endfor %}

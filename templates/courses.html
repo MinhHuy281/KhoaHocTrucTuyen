@@ -5,7 +5,7 @@
 {% block title %}Khóa Học{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'courses.css' %}?v=20260405-1">
+<link rel="stylesheet" href="{% static 'courses.css' %}?v=20260426-2">
 {% endblock %}
 
 {% block content %}
@@ -83,33 +83,44 @@
         
         <div class="course-grid">
             {% for course in courses %}
-            <div class="course-card">
-                <div class="course-image">
-                    {% if course.image %}
-                        <img src="{{ course.image.url }}" alt="{{ course.title }}">
-                    {% else %}
-                        <img src="{% static 'hq720.jpg' %}" alt="Mẫu khóa học">
-                    {% endif %}
-                </div>
-                <div class="course-info">
-                    <h3>{{ course.title }}</h3>
-                    <p>Môn: {{ course.subject }} • Lớp: {{ course.grade }} • Cấp: {{ course.level }}</p>
-                    <p class="course-teacher-line">Giảng viên: {{ course.teacher.username|default:"Chưa cập nhật" }}</p>
-                    <p class="course-rating-line">
-                        {% if course.rating_count %}
-                            <span>Đánh giá:</span>
-                            <span class="rating-stars" style="--rating: {{ course.avg_rating|rating_css }};" aria-label="{{ course.avg_rating|floatformat:1 }} trên 5 sao"></span>
-                            <span>{{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }} lượt)</span>
+            <a href="{% url 'course_detail' course.id %}" class="course-link">
+                <div class="course-card">
+                    <div class="course-image">
+                        {% if course.image %}
+                            <img src="{{ course.image.url }}" alt="{{ course.title }}">
                         {% else %}
-                            <span>Đánh giá:</span>
-                            <span class="rating-stars" style="--rating: 0;" aria-label="0 trên 5 sao"></span>
-                            <span>0.0/5 (0 lượt)</span>
+                            <img src="{% static 'hq720.jpg' %}" alt="Mẫu khóa học">
                         {% endif %}
-                    </p>
-                    <div class="price">{{ course.price|format_vnd }} VNĐ</div>
-                    <a href="{% url 'course_detail' course.id %}" class="btn-detail">Xem chi tiết →</a>
+                    </div>
+                    <div class="course-info">
+                        <h3>{{ course.title }}</h3>
+                        <p class="course-desc">{{ course.description|truncatewords:20 }}</p>
+                        <div class="course-meta">
+                            <span>📘 {{ course.subject }}</span>
+                            <span>🎓 {{ course.grade }}</span>
+                            <span>📈 {{ course.level }}</span>
+                        </div>
+                        <div class="course-kpis">
+                            <span><i class="bi bi-journal-text"></i> {{ course.lessons_count }} bài học</span>
+                            <span><i class="bi bi-person-badge"></i> {{ course.teacher.username|default:"Chưa cập nhật" }}</span>
+                            <span><i class="bi bi-clipboard-check"></i> {{ course.quizzes_count }} quiz</span>
+                        </div>
+                        <p class="course-rating-line">
+                            {% if course.rating_count %}
+                                <span>Đánh giá:</span>
+                                <span class="rating-stars" style="--rating: {{ course.avg_rating|rating_css }};" aria-label="{{ course.avg_rating|floatformat:1 }} trên 5 sao"></span>
+                                <span>{{ course.avg_rating|floatformat:1 }}/5 ({{ course.rating_count }} lượt)</span>
+                            {% else %}
+                                <span>Đánh giá:</span>
+                                <span class="rating-stars" style="--rating: 0;" aria-label="0 trên 5 sao"></span>
+                                <span>0.0/5 (0 lượt)</span>
+                            {% endif %}
+                        </p>
+                        <div class="price">{{ course.price|format_vnd }} VNĐ</div>
+                        <span class="btn-detail">Xem chi tiết →</span>
+                    </div>
                 </div>
-            </div>
+            </a>
             {% endfor %}
         </div>
 
