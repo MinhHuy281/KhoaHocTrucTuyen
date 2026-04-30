@@ -3,157 +3,809 @@
 
 {% block title %}Tạo khóa học{% endblock %}
 
-<!-- ✅ THÊM ĐÚNG CHỖ -->
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'techer.css' %}">
+<style>
+    /* ===== CREATE COURSE PAGE ===== */
+    .teacher-create-course {
+        max-width: 1280px;
+        margin: 0 auto;
+    }
+
+    /* Hero Section - Gradient Background */
+    .teacher-create-hero {
+        background: linear-gradient(135deg, #1459d9 0%, #0d47a1 50%, #1565c0 100%);
+        border-radius: 20px;
+        padding: 48px 40px;
+        margin-bottom: 40px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .teacher-create-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .teacher-create-hero-copy {
+        position: relative;
+        z-index: 1;
+    }
+
+    .teacher-create-kicker {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0.8;
+        margin: 0 0 8px;
+    }
+
+    .teacher-create-hero h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 0 0 12px;
+        line-height: 1.2;
+    }
+
+    .teacher-create-subtitle {
+        font-size: 1rem;
+        line-height: 1.6;
+        opacity: 0.95;
+        margin: 0;
+        max-width: 600px;
+    }
+
+    /* Progress Bar */
+    .teacher-create-progress {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 40px;
+        position: relative;
+        padding: 0 20px;
+    }
+
+    .teacher-create-progress::before {
+        content: '';
+        position: absolute;
+        top: 24px;
+        left: 40px;
+        right: 40px;
+        height: 2px;
+        background: linear-gradient(90deg, #dce5f2 0%, #dce5f2 50%, transparent 50%);
+        z-index: 0;
+    }
+
+    .teacher-create-progress-step {
+        background: white;
+        border: 2px solid #e8ecf1;
+        border-radius: 12px;
+        padding: 20px 16px;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        z-index: 1;
+        cursor: pointer;
+    }
+
+    .teacher-create-progress-step.active {
+        background: linear-gradient(135deg, #1459d9 0%, #0d47a1 100%);
+        border-color: #1459d9;
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(20, 89, 217, 0.25);
+    }
+
+    .teacher-create-progress-step.active strong {
+        color: white;
+    }
+
+    .teacher-create-progress-step.active span {
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .teacher-create-progress-step strong {
+        display: block;
+        color: #1459d9;
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .teacher-create-progress-step span {
+        display: block;
+        color: #52607a;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    /* Main Layout */
+    .teacher-create-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 32px;
+        margin-top: 40px;
+    }
+
+    .teacher-form {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    /* Error Message */
+    .teacher-form-error {
+        background: #fee;
+        border: 1px solid #fcc;
+        border-radius: 12px;
+        padding: 16px 20px;
+        color: #c33;
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+    }
+
+    /* Form Section */
+    .teacher-form-section {
+        background: white;
+        border: 1px solid #e8ecf1;
+        border-radius: 16px;
+        padding: 32px;
+        transition: all 0.3s ease;
+        scroll-margin-top: 80px;
+    }
+
+    .teacher-form-section:hover {
+        border-color: #1459d9;
+        box-shadow: 0 4px 16px rgba(20, 89, 217, 0.08);
+    }
+
+    .teacher-form-section-head {
+        margin-bottom: 28px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #f0f4f9;
+    }
+
+    .teacher-form-eyebrow {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #1459d9;
+        margin: 0 0 8px;
+    }
+
+    .teacher-form-section-head h3 {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0 0 4px;
+        line-height: 1.2;
+    }
+
+    .teacher-form-section-head p {
+        color: #52607a;
+        font-size: 0.95rem;
+        margin: 8px 0 0;
+        line-height: 1.5;
+    }
+
+    /* Form Grid */
+    .teacher-form-grid {
+        display: grid;
+        gap: 20px;
+    }
+
+    .teacher-form-grid--one {
+        grid-template-columns: 1fr;
+    }
+
+    .teacher-form-grid--two {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .teacher-span-2 {
+        grid-column: 1 / -1;
+    }
+
+    /* Form Group */
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .teacher-form-label {
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .teacher-required {
+        color: #e74c3c;
+    }
+
+    .form-control {
+        padding: 12px 14px;
+        border: 1px solid #d4dce6;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #1459d9;
+        box-shadow: 0 0 0 3px rgba(20, 89, 217, 0.1);
+        background: #f8faff;
+    }
+
+    .form-control:disabled {
+        background: #f5f7fb;
+        color: #a0aab8;
+        cursor: not-allowed;
+    }
+
+    .form-group small {
+        color: #52607a;
+        font-size: 0.85rem;
+        margin-top: 6px;
+        line-height: 1.4;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 120px;
+        font-family: inherit;
+    }
+
+    /* Subject Toggle */
+    .teacher-toggle-group {
+        display: flex;
+        gap: 12px;
+    }
+
+    .teacher-toggle-option {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border: 1px solid #d4dce6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .teacher-toggle-option input {
+        cursor: pointer;
+    }
+
+    .teacher-toggle-option input:checked + span {
+        color: #1459d9;
+        font-weight: 600;
+    }
+
+    .teacher-toggle-option:has(input:checked) {
+        background: #f8faff;
+        border-color: #1459d9;
+    }
+
+    /* Checkbox */
+    .teacher-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .teacher-checkbox-label input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #1459d9;
+    }
+
+    .checkbox-text {
+        color: #0f172a;
+    }
+
+    .teacher-price-section.is-disabled input {
+        opacity: 0.6;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .teacher-create-sidebar {
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+    }
+
+    .teacher-sidebar-card {
+        background: white;
+        border: 1px solid #e8ecf1;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .teacher-sidebar-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f0f4f9;
+    }
+
+    .teacher-sidebar-tips {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .teacher-tip {
+        display: flex;
+        gap: 12px;
+    }
+
+    .teacher-tip-icon {
+        flex-shrink: 0;
+        font-size: 1.4rem;
+    }
+
+    .teacher-tip div {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .teacher-tip strong {
+        color: #0f172a;
+        font-size: 0.9rem;
+        display: block;
+    }
+
+    .teacher-tip span {
+        color: #52607a;
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+
+    .teacher-sidebar-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #1459d9 0%, #0d47a1 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(20, 89, 217, 0.25);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(20, 89, 217, 0.35);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
+    .btn-secondary {
+        background: #f5f7fb;
+        color: #0f172a;
+        border: 1px solid #d4dce6;
+    }
+
+    .btn-secondary:hover {
+        background: #e8ecf1;
+        border-color: #1459d9;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+        .teacher-create-layout {
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        .teacher-create-sidebar {
+            position: static;
+            top: auto;
+        }
+
+        .teacher-form-grid--two {
+            grid-template-columns: 1fr;
+        }
+
+        .teacher-create-hero {
+            padding: 36px 32px;
+        }
+
+        .teacher-create-hero h2 {
+            font-size: 1.8rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .teacher-create-progress {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .teacher-form-section {
+            padding: 20px;
+        }
+
+        .teacher-form-section-head h3 {
+            font-size: 1.2rem;
+        }
+
+        .teacher-create-hero {
+            padding: 28px 20px;
+            margin-bottom: 28px;
+        }
+
+        .teacher-create-hero h2 {
+            font-size: 1.5rem;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .teacher-create-progress {
+            grid-template-columns: 1fr;
+        }
+
+        .teacher-form-section {
+            padding: 16px;
+        }
+
+        .teacher-create-hero h2 {
+            font-size: 1.3rem;
+        }
+
+        .teacher-toggle-group {
+            flex-direction: column;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="teacher-container">
-    <h2>📚 Tạo khóa học mới</h2>
+<div class="teacher-container teacher-create-course">
+    <!-- PROGRESS BAR - 4 STEPS -->
+    <div class="teacher-create-progress">
+        <div class="teacher-create-progress-step active" data-step="1">
+            <strong>1️⃣ Phân loại</strong>
+            <span>Lớp, cấp độ, môn</span>
+        </div>
+        <div class="teacher-create-progress-step" data-step="2">
+            <strong>2️⃣ Thông tin</strong>
+            <span>Tiêu đề, mô tả</span>
+        </div>
+        <div class="teacher-create-progress-step" data-step="3">
+            <strong>3️⃣ Giá cả</strong>
+            <span>Miễn phí / Có phí</span>
+        </div>
+        <div class="teacher-create-progress-step" data-step="4">
+            <strong>4️⃣ Bài học</strong>
+            <span>Nội dung đầu tiên</span>
+        </div>
+    </div>
 
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
+    <!-- HERO SECTION -->
+    <div class="teacher-create-hero">
+        <div class="teacher-create-hero-copy">
+            <p class="teacher-create-kicker">📚 Quản lý khóa học</p>
+            <h2>Tạo khóa học mới</h2>
+            <p class="teacher-create-subtitle">Chia sẻ kiến thức của bạn bằng cách tạo một khóa học hoàn chỉnh. Hệ thống sẽ tự động tạo bài học đầu tiên cùng với video và slide để bạn tiếp tục phát triển nội dung.</p>
+        </div>
+    </div>
 
-        {% if error %}
-            <div class="form-group" style="color: #b00; margin-bottom: 15px;">
-                {{ error }}
+    <!-- FORM & SIDEBAR LAYOUT -->
+    <div class="teacher-create-layout">
+        <!-- MAIN FORM -->
+        <form method="POST" enctype="multipart/form-data" class="teacher-form">
+            {% csrf_token %}
+
+            <!-- ERROR MESSAGES -->
+            {% if error %}
+                <div class="teacher-form-error">
+                    <strong>⚠️ Lỗi:</strong> {{ error }}
+                </div>
+            {% endif %}
+
+            <!-- SECTION 1: PHÂN LOẠI -->
+            <section class="teacher-form-section" data-step="1">
+                <div class="teacher-form-section-head">
+                    <p class="teacher-form-eyebrow">BƯỚC 1 • Phân loại khóa học</p>
+                    <h3>Lớp, cấp độ và môn học</h3>
+                    <p>Thông tin này giúp học viên dễ dàng tìm thấy khóa học của bạn.</p>
+                </div>
+
+                <div class="teacher-form-grid teacher-form-grid--two">
+                    <div class="form-group">
+                        <label for="gradeSelect">Lớp <span class="teacher-required">*</span></label>
+                        <select id="gradeSelect" name="grade" class="form-control" required>
+                            <option value="">— Chọn lớp —</option>
+                            {% for g in grades %}
+                                <option value="{{ g.id }}">{{ g.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small>Ví dụ: Lớp 8, Lớp 10, Lớp 12...</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="levelSelect">Cấp độ <span class="teacher-required">*</span></label>
+                        <select id="levelSelect" name="level" class="form-control" required>
+                            <option value="">— Chọn cấp —</option>
+                            {% for l in levels %}
+                                <option value="{{ l.id }}">{{ l.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small>Ví dụ: Cơ bản, Nâng cao, Luyện đề...</small>
+                    </div>
+
+                    <div class="form-group teacher-span-2">
+                        <label class="teacher-form-label">Môn học <span class="teacher-required">*</span></label>
+                        <div class="teacher-toggle-group">
+                            <label class="teacher-toggle-option">
+                                <input type="radio" name="subject_option" value="existing" checked>
+                                <span>Chọn môn có sẵn</span>
+                            </label>
+                            <label class="teacher-toggle-option">
+                                <input type="radio" name="subject_option" value="new">
+                                <span>Thêm môn mới</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group teacher-span-2" id="existing_subject_group">
+                        <label for="subjectSelect">Môn học có sẵn</label>
+                        <select id="subjectSelect" name="subject" class="form-control">
+                            <option value="">— Chọn môn —</option>
+                            {% for s in subjects %}
+                                <option value="{{ s.id }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small>🔍 Lựa chọn từ các môn học đã có trong hệ thống.</small>
+                    </div>
+
+                    <div class="form-group teacher-span-2" id="new_subject_group" style="display: none;">
+                        <label for="newSubjectInput">Tên môn mới</label>
+                        <input id="newSubjectInput" type="text" name="new_subject" class="form-control" placeholder="Ví dụ: Vật lý nâng cao, Tiếng Anh giao tiếp...">
+                        <small>✨ Hệ thống sẽ tự động tạo môn mới nếu chưa có.</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: THÔNG TIN CƠ BẢN -->
+            <section class="teacher-form-section" data-step="2">
+                <div class="teacher-form-section-head">
+                    <p class="teacher-form-eyebrow">BƯỚC 2 • Thông tin cơ bản</p>
+                    <h3>Tiêu đề, mô tả và ảnh bìa</h3>
+                    <p>Các thông tin này sẽ hiển thị trên trang danh sách khóa học.</p>
+                </div>
+
+                <div class="teacher-form-grid teacher-form-grid--one">
+                    <div class="form-group">
+                        <label for="courseTitle">Tiêu đề khóa học <span class="teacher-required">*</span></label>
+                        <input id="courseTitle" type="text" name="title" class="form-control" required placeholder="VD: Toán 8 - Phương trình bậc nhất một ẩn">
+                        <small>💡 Tiêu đề rõ ràng (lớp + môn + nội dung) giúp học viên tìm kiếm dễ dàng hơn.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="courseDescription">Mô tả khóa học</label>
+                        <textarea id="courseDescription" name="description" class="form-control" placeholder="Tóm tắt nội dung, đối tượng, phương pháp dạy, mục tiêu..."></textarea>
+                        <small>💡 Mô tả chi tiết giúp học viên quyết định nhanh có nên đăng ký hay không.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="courseImage">Ảnh bìa khóa học</label>
+                        <input id="courseImage" type="file" name="image" class="form-control" accept="image/*">
+                        <small>💡 Ảnh bìa xuất hiện trên danh sách khóa học. Tỷ lệ: 16:9 (800×450px)</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: GIÁ CẢ & MEDIA -->
+            <section class="teacher-form-section" data-step="3">
+                <div class="teacher-form-section-head">
+                    <p class="teacher-form-eyebrow">BƯỚC 3 • Giá cả và media</p>
+                    <h3>Chiến lược bán hàng</h3>
+                    <p>Video giới thiệu và slide sẽ được tự động nhúng vào bài học đầu tiên.</p>
+                </div>
+
+                <div class="teacher-form-grid teacher-form-grid--two">
+                    <div class="form-group teacher-price-section">
+                        <label for="coursePrice">Giá khóa học (VNĐ)</label>
+                        <input id="coursePrice" type="number" name="price" class="form-control" value="0" min="0" step="1000">
+                        <small>💡 Đặt 0 = miễn phí, hoặc nhập giá để kiếm doanh thu.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="teacher-checkbox-label">
+                            <input id="courseFree" type="checkbox" name="is_free">
+                            <span class="checkbox-text">✓ Mở miễn phí</span>
+                        </label>
+                        <small>💡 Tick để mở khóa miễn phí. Giá sẽ tự động về 0.</small>
+                    </div>
+
+                    <div class="form-group teacher-span-2">
+                        <label for="courseVideo">Video giới thiệu (YouTube)</label>
+                        <input id="courseVideo" type="text" name="video_url" class="form-control" placeholder="https://youtube.com/watch?v=dQw4w9WgXcQ">
+                        <small>💡 Link YouTube: video sẽ được nhúng vào bài học đầu tiên.</small>
+                    </div>
+
+                    <div class="form-group teacher-span-2">
+                        <label for="courseSlide">Slide bài học</label>
+                        <input id="courseSlide" type="url" name="slide_url" class="form-control" placeholder="https://... (Canva, Google Slides, PDF, v.v.)">
+                        <small>💡 Hỗ trợ: Canva, Google Slides, Google Drive, PDF online...</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: BÀI HỌC ĐẦU TIÊN -->
+            <section class="teacher-form-section" data-step="4">
+                <div class="teacher-form-section-head">
+                    <p class="teacher-form-eyebrow">BƯỚC 4 • Bài học mở đầu</p>
+                    <h3>Nội dung bài học đầu tiên</h3>
+                    <p>Hệ thống sẽ tự động tạo bài học này cùng với video và slide bên trên.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="courseContent">Nội dung bài học</label>
+                    <textarea id="courseContent" name="content" class="form-control" rows="8" placeholder="Nhập nội dung bài học: định nghĩa, ví dụ minh họa, công thức quan trọng, bài tập thực hành..."></textarea>
+                    <small>💡 Bài học đầu tiên là cơ hội gây ấn tượng. Hãy tạo nội dung chất lượng, rõ ràng, hấp dẫn!</small>
+                </div>
+            </section>
+        </form>
+
+        <!-- SIDEBAR - TIPS -->
+        <aside class="teacher-create-sidebar">
+            <div class="teacher-sidebar-card">
+                <div class="teacher-sidebar-title">💡 Mẹo tạo khóa học</div>
+                <div class="teacher-sidebar-tips">
+                    <div class="teacher-tip">
+                        <div class="teacher-tip-icon">📌</div>
+                        <div>
+                            <strong>Tiêu đề chuẩn</strong>
+                            <span>"Toán 8 - Phương trình bậc nhất" hay hơn "Bài giảng toán"</span>
+                        </div>
+                    </div>
+                    <div class="teacher-tip">
+                        <div class="teacher-tip-icon">🎯</div>
+                        <div>
+                            <strong>Phân loại chính xác</strong>
+                            <span>Lớp + Cấp độ + Môn phải khớp nội dung để học viên tìm thấy dễ.</span>
+                        </div>
+                    </div>
+                    <div class="teacher-tip">
+                        <div class="teacher-tip-icon">💰</div>
+                        <div>
+                            <strong>Chiến lược giá</strong>
+                            <span><strong>Miễn phí:</strong> xây dựng danh tiếng. <strong>Có phí:</strong> kiếm doanh thu.</span>
+                        </div>
+                    </div>
+                    <div class="teacher-tip">
+                        <div class="teacher-tip-icon">🎥</div>
+                        <div>
+                            <strong>Media chất lượng</strong>
+                            <span>Video & slide đẹp mắt làm bài học hấp dẫn gấp nhiều lần.</span>
+                        </div>
+                    </div>
+                    <div class="teacher-tip">
+                        <div class="teacher-tip-icon">✨</div>
+                        <div>
+                            <strong>Bài học đầu tiên</strong>
+                            <span>Quyết định của học viên. Hãy tạo ấn tượng bằng nội dung tuyệt vời!</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="teacher-sidebar-actions">
+                    <button type="submit" class="btn-primary" onclick="document.querySelector('.teacher-form').submit();">
+                        ✨ Tạo khóa học
+                    </button>
+                    <a href="/teacher/courses/" class="btn-secondary">← Quay lại</a>
+                </div>
             </div>
-        {% endif %}
-
-        <!-- TIÊU ĐỀ -->
-        <div class="form-group">
-            <label>Tiêu đề khóa học</label>
-            <input type="text" name="title" class="form-control" required>
-        </div>
-
-        <!-- MÔ TẢ -->
-        <div class="form-group">
-            <label>Mô tả</label>
-            <textarea name="description" class="form-control"></textarea>
-        </div>
-
-        <!-- GIÁ -->
-        <div class="form-group">
-            <label>Giá (VNĐ)</label>
-            <input type="number" name="price" class="form-control" value="0">
-        </div>
-
-        <!-- FREE -->
-        <div class="form-group">
-            <label>
-                <input type="checkbox" name="is_free">
-                Khóa học miễn phí
-            </label>
-        </div>
-
-        <!-- ẢNH -->
-        <div class="form-group">
-            <label>Ảnh khóa học</label>
-            <input type="file" name="image" class="form-control">
-        </div>
-
-        <!-- VIDEO -->
-        <div class="form-group">
-            <label>Video giới thiệu (YouTube)</label>
-            <input type="text" name="video_url" class="form-control"
-                   placeholder="https://youtube.com/watch?v=...">
-        </div>
-
-        <!-- SLIDE -->
-        <div class="form-group">
-            <label>Slide bài học (không bắt buộc)</label>
-            <input type="url" name="slide_url" class="form-control"
-                   placeholder="https://... (Canva, Google Slides, hoặc link khác)">
-            <small>Có thể để trống nếu chưa có slide. Bạn có thể cập nhật sau.</small>
-        </div>
-
-        <!-- NỘI DUNG -->
-        <div class="form-group">
-            <label>Nội dung bài học đầu tiên</label>
-            <textarea name="content" class="form-control"
-                      placeholder="Nhập nội dung bài học..."></textarea>
-        </div>
-
-        <!-- MÔN -->
-        <div class="form-group">
-            <label>Chọn cách thêm môn học</label>
-            <div>
-                <label>
-                    <input type="radio" name="subject_option" value="existing" checked>
-                    Chọn môn có sẵn
-                </label>
-                <label style="margin-left: 20px;">
-                    <input type="radio" name="subject_option" value="new">
-                    Thêm môn mới
-                </label>
-            </div>
-        </div>
-
-        <div class="form-group" id="existing_subject" style="display: block;">
-            <label>Môn học có sẵn</label>
-            <select name="subject" class="form-control">
-                <option value="">-- Chọn môn có sẵn --</option>
-                {% for s in subjects %}
-                    <option value="{{ s.id }}">{{ s.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group" id="new_subject" style="display: none;">
-            <label>Tên môn mới</label>
-            <input type="text" name="new_subject" class="form-control"
-                   placeholder="Nhập tên môn mới">
-            <small>Nhập tên môn học mới nếu không có trong danh sách.</small>
-        </div>
-
-        <!-- LỚP -->
-        <div class="form-group">
-            <label>Lớp</label>
-            <select name="grade" class="form-control" required>
-                <option value="">-- Chọn lớp --</option>
-                {% for g in grades %}
-                    <option value="{{ g.id }}">{{ g.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- CẤP -->
-        <div class="form-group">
-            <label>Cấp độ</label>
-            <select name="level" class="form-control" required>
-                <option value="">-- Chọn cấp --</option>
-                {% for l in levels %}
-                    <option value="{{ l.id }}">{{ l.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <br>
-
-        <button type="submit" class="btn-primary">➕ Tạo khóa học</button>
-        <a href="/teacher/courses/" class="btn-secondary">⬅ Quay lại</a>
-    </form>
+        </aside>
+    </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const radios = document.querySelectorAll('input[name="subject_option"]');
-    const existingDiv = document.getElementById('existing_subject');
-    const newDiv = document.getElementById('new_subject');
+    // ===== SUBJECT TOGGLE =====
+    const subjectRadios = document.querySelectorAll('input[name="subject_option"]');
+    const existingGroup = document.getElementById('existing_subject_group');
+    const newGroup = document.getElementById('new_subject_group');
+    const subjectSelect = document.getElementById('subjectSelect');
+    const newSubjectInput = document.getElementById('newSubjectInput');
 
-    radios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'existing') {
-                existingDiv.style.display = 'block';
-                newDiv.style.display = 'none';
-            } else {
-                existingDiv.style.display = 'none';
-                newDiv.style.display = 'block';
+    function updateSubjectMode() {
+        const isExisting = document.querySelector('input[name="subject_option"]:checked').value === 'existing';
+        existingGroup.style.display = isExisting ? 'block' : 'none';
+        newGroup.style.display = isExisting ? 'none' : 'block';
+        subjectSelect.required = isExisting;
+        newSubjectInput.required = !isExisting;
+    }
+
+    subjectRadios.forEach(radio => {
+        radio.addEventListener('change', updateSubjectMode);
+    });
+
+    // ===== PRICE TOGGLE =====
+    const priceInput = document.getElementById('coursePrice');
+    const freeCheckbox = document.getElementById('courseFree');
+
+    function updatePriceState() {
+        const priceGroup = priceInput.closest('.teacher-price-section');
+        if (freeCheckbox.checked) {
+            priceInput.value = 0;
+            priceInput.disabled = true;
+            priceGroup.classList.add('is-disabled');
+        } else {
+            priceInput.disabled = false;
+            priceGroup.classList.remove('is-disabled');
+        }
+    }
+
+    freeCheckbox.addEventListener('change', updatePriceState);
+
+    // ===== PROGRESS BAR CLICK =====
+    const progressSteps = document.querySelectorAll('.teacher-create-progress-step');
+    const formSections = document.querySelectorAll('.teacher-form-section');
+
+    progressSteps.forEach(step => {
+        step.addEventListener('click', function() {
+            const stepNum = this.getAttribute('data-step');
+            
+            // Update progress bar
+            progressSteps.forEach(s => s.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Scroll to section
+            const section = document.querySelector(`.teacher-form-section[data-step="${stepNum}"]`);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });
     });
+
+    updateSubjectMode();
+    updatePriceState();
 });
 </script>
-
 {% endblock %}

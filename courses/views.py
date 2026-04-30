@@ -1117,9 +1117,10 @@ def lesson_view(request, lesson_id):
             messages.warning(request, 'Vui lòng đăng nhập để bình luận bài học.')
             return redirect('login')
 
-        # ✅ Bắt buộc phải enrolled và đã duyệt/thanh toán xong mới được bình luận
-        if not enrollment:
-            messages.error(request, 'Bạn cần đăng ký và thanh toán thành công trước khi được bình luận và đánh giá bài học.')
+        # ✅ Cho phép bình luận nếu: enrolled + duyệt, HOẶC bài là miễn phí preview
+        can_comment_this_lesson = enrollment or lesson.is_free_preview
+        if not can_comment_this_lesson:
+            messages.error(request, 'Bạn cần đăng ký và thanh toán thành công trước khi được bình luận và đánh giá bài học này.')
             return redirect('course_detail', course_id=course.id)
 
         action = (request.POST.get('action') or 'comment').strip()
@@ -1296,8 +1297,8 @@ def lesson_view(request, lesson_id):
                 'percent': round(percent, 2),
             })
 
-    # Kiểm tra xem user có thể bình luận hay không: bắt buộc phải enrolled (đã approved)
-    can_comment = bool(enrollment)
+    # Kiểm tra xem user có thể bình luận hay không: enrolled (đã approved) HOẶC bài là free preview
+    can_comment = bool(enrollment or (request.user.is_authenticated and lesson.is_free_preview))
 
     return render(request, "lesson.html", {
         "lesson": lesson,
