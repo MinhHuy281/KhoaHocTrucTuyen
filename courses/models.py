@@ -275,7 +275,7 @@ class Notification(models.Model):
 # Model bình luận bài học
 class LessonComment(models.Model):
     lesson = models.ForeignKey('Lesson', on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lesson_comments')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='lesson_comments')
     content = models.TextField(max_length=1000)
     rating = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
@@ -299,9 +299,11 @@ class LessonComment(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
+        user_name = self.user.username if self.user else "Khách"
+        parent_user = self.parent_comment.user.username if (self.parent_comment and self.parent_comment.user) else "Khách"
         if self.parent_comment:
-            return f"{self.user.username} phản hồi {self.parent_comment.user.username} - {self.lesson.title}"
-        return f"{self.user.username} - {self.lesson.title} ({self.rating} sao)"
+            return f"{user_name} phản hồi {parent_user} - {self.lesson.title}"
+        return f"{user_name} - {self.lesson.title} ({self.rating} sao)"
     
     # 🆕 Lấy tất cả replies
     def get_all_replies(self):
@@ -316,7 +318,7 @@ class LessonComment(models.Model):
 # Model bình luận khóa học
 class CourseComment(models.Model):
     course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_comments')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='course_comments')
     content = models.TextField(max_length=1000)
     rating = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
@@ -340,9 +342,11 @@ class CourseComment(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
+        user_name = self.user.username if self.user else "Khách"
+        parent_user = self.parent_comment.user.username if (self.parent_comment and self.parent_comment.user) else "Khách"
         if self.parent_comment:
-            return f"{self.user.username} phản hồi {self.parent_comment.user.username} - {self.course.title}"
-        return f"{self.user.username} - {self.course.title} ({self.rating} sao)"
+            return f"{user_name} phản hồi {parent_user} - {self.course.title}"
+        return f"{user_name} - {self.course.title} ({self.rating} sao)"
     
     # 🆕 Lấy tất cả replies
     def get_all_replies(self):

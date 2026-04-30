@@ -446,9 +446,10 @@ def notify_teacher_for_comment(*, course, actor, rating, content, comment_kind, 
 
     snippet = (content or "").strip().replace("\n", " ")[:80]
     lesson_part = f" ở bài '{lesson.title}'" if lesson else ""
+    actor_name = actor.username if actor else "Khách"
 
     human_message = (
-        f"Học viên {actor.username} đã bình luận{lesson_part} trong khóa '{course.title}' "
+        f"Học viên {actor_name} đã bình luận{lesson_part} trong khóa '{course.title}' "
         f"({rating} sao). Nội dung: \"{snippet}\""
     )
 
@@ -456,7 +457,7 @@ def notify_teacher_for_comment(*, course, actor, rating, content, comment_kind, 
         'type': comment_kind,
         'course_id': str(course.id),
         'comment_id': str(comment_id),
-        'student_id': str(actor.id),
+        'student_id': str(actor.id) if actor else '0',
     }
     if lesson:
         meta['lesson_id'] = str(lesson.id)
@@ -475,13 +476,14 @@ def notify_teacher_for_user_reply(*, course, actor, reply_text, comment_kind, co
 
     snippet = (reply_text or "").strip().replace("\n", " ")[:120]
     lesson_part = f" ở bài '{lesson.title}'" if lesson else ""
-    human_message = f"Học viên {actor.username} đã phản hồi lại{lesson_part} trong khóa '{course.title}': \"{snippet}\""
+    actor_name = actor.username if actor else "Khách"
+    human_message = f"Học viên {actor_name} đã phản hồi lại{lesson_part} trong khóa '{course.title}': \"{snippet}\""
 
     meta = {
         'type': comment_kind,
         'course_id': str(course.id),
         'comment_id': str(comment_id),
-        'student_id': str(actor.id),
+        'student_id': str(actor.id) if actor else '0',
     }
     if lesson:
         meta['lesson_id'] = str(lesson.id)
@@ -505,14 +507,15 @@ def notify_comment_owner_for_reply(*, parent_comment, actor, reply_text, comment
         location_text = f"trong khóa '{course.title}'"
     else:
         location_text = ""
+    actor_name = actor.username if actor else "Khách"
 
-    human_message = f"Học viên {actor.username} đã phản hồi bình luận của bạn {location_text}: \"{snippet}\""
+    human_message = f"Học viên {actor_name} đã phản hồi bình luận của bạn {location_text}: \"{snippet}\""
 
     meta = {
         'type': comment_kind,
         'course_id': str(course.id if course else parent_comment.course_id),
         'comment_id': str(parent_comment.id),
-        'student_id': str(actor.id),
+        'student_id': str(actor.id) if actor else '0',
     }
     if lesson:
         meta['lesson_id'] = str(lesson.id)
@@ -895,7 +898,7 @@ def course_detail(request, course_id):
             elif enrollment.status == 'paid':
                 pending = True
 
-    can_comment = bool(enrollment and enrollment.status == 'approved')
+    can_comment = bool((enrollment and getattr(enrollment, 'status', None) == 'approved') or course.is_free)
 
     comments_enabled = comments_available
     comments = []
@@ -904,12 +907,12 @@ def course_detail(request, course_id):
     rating_rows = [{'star': star, 'count': 0, 'percent': 0} for star in range(5, 0, -1)]
 
     if request.method == 'POST':
-        if not request.user.is_authenticated:
+        if not request.user.is_authenticated and not course.is_free:
             messages.warning(request, 'Vui lòng đăng nhập để bình luận khóa học.')
             return redirect('login')
 
         if not can_comment:
-            messages.error(request, 'Bạn cần đăng ký và thanh toán thành công trước khi được bình luận và đánh giá khóa học.')
+            messages.error(request, 'Bạn cần đăng ký và thanh toán trước khi được bình luận và đánh giá khóa học.')
             return redirect('course_detail', course_id=course.id)
 
         action = (request.POST.get('action') or 'comment').strip()
@@ -936,7 +939,7 @@ def course_detail(request, course_id):
             fallback_rating = parent_comment.rating if getattr(parent_comment, 'rating', None) else 5
             reply_model.objects.create(
                 course=course,
-                user=request.user,
+                user=request.user if request.user.is_authenticated else None,
                 content=reply_text,
                 rating=fallback_rating,
                 parent_comment=parent_comment,
@@ -1010,7 +1013,7 @@ def course_detail(request, course_id):
             try:
                 course_comment = CourseComment.objects.create(
                     course=course,
-                    user=request.user,
+                    user=request.user if request.user.is_authenticated else None,
                     content=content,
                     rating=rating,
                 )
@@ -1113,12 +1116,12 @@ def lesson_view(request, lesson_id):
             messages.warning(request, 'Chức năng bình luận đang tạm thời chưa sẵn sàng. Vui lòng kiểm tra quyền cơ sở dữ liệu.')
             return redirect('lesson_view', lesson_id=lesson.id)
 
-        if not request.user.is_authenticated:
+        if not request.user.is_authenticated and not (course.is_free or lesson.is_free_preview):
             messages.warning(request, 'Vui lòng đăng nhập để bình luận bài học.')
             return redirect('login')
 
-        # ✅ Cho phép bình luận nếu: enrolled + duyệt, HOẶC bài là miễn phí preview
-        can_comment_this_lesson = enrollment or lesson.is_free_preview
+        # ✅ Cho phép bình luận nếu: enrolled + duyệt, hoặc khóa/bài là miễn phí
+        can_comment_this_lesson = bool(enrollment or course.is_free or lesson.is_free_preview)
         if not can_comment_this_lesson:
             messages.error(request, 'Bạn cần đăng ký và thanh toán thành công trước khi được bình luận và đánh giá bài học này.')
             return redirect('course_detail', course_id=course.id)
@@ -1147,7 +1150,7 @@ def lesson_view(request, lesson_id):
             fallback_rating = parent_comment.rating if getattr(parent_comment, 'rating', None) else 5
             reply_model.objects.create(
                 lesson=lesson,
-                user=request.user,
+                user=request.user if request.user.is_authenticated else None,
                 content=reply_text,
                 rating=fallback_rating,
                 parent_comment=parent_comment,
@@ -1222,7 +1225,7 @@ def lesson_view(request, lesson_id):
         else:
             lesson_comment = LessonComment.objects.create(
                 lesson=lesson,
-                user=request.user,
+                user=request.user if request.user.is_authenticated else None,
                 content=content,
                 rating=rating,
             )
@@ -1297,8 +1300,8 @@ def lesson_view(request, lesson_id):
                 'percent': round(percent, 2),
             })
 
-    # Kiểm tra xem user có thể bình luận hay không: enrolled (đã approved) HOẶC bài là free preview
-    can_comment = bool(enrollment or (request.user.is_authenticated and lesson.is_free_preview))
+    # Kiểm tra xem user có thể bình luận hay không: enrolled (đã approved) HOẶC khóa/bài là miễn phí
+    can_comment = bool(enrollment or course.is_free or lesson.is_free_preview)
 
     return render(request, "lesson.html", {
         "lesson": lesson,
