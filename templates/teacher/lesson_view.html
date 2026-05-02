@@ -155,7 +155,7 @@
             {% for comment in comments %}
                 <article class="teacher-comment-card">
                     <div class="teacher-comment-head">
-                        <p class="teacher-comment-user">{{ comment.user.username }}</p>
+                        <p class="teacher-comment-user">{% if comment.user %}{{ comment.user.username }}{% else %}Khách{% endif %}</p>
                         <span class="teacher-comment-time">{{ comment.created_at|date:"d/m/Y H:i" }}{% if comment.rating %} • {{ comment.rating }} sao{% endif %}</span>
                     </div>
 
@@ -163,7 +163,7 @@
 
                     {% for reply in comment.replies.all %}
                         <div class="teacher-comment-reply">
-                            <p class="teacher-comment-reply-title">{{ reply.user.username }} - {{ reply.created_at|date:"d/m/Y H:i" }}</p>
+                            <p class="teacher-comment-reply-title">{% if reply.user %}{{ reply.user.username }}{% else %}Khách{% endif %} - {{ reply.created_at|date:"d/m/Y H:i" }}</p>
                             <p style="margin:0;">{{ reply.content }}</p>
                         </div>
                     {% endfor %}

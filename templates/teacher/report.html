@@ -5,13 +5,15 @@
 
 {% block extra_css %}
 <style>
+/* Use light card style consistent with site */
 .daily-report-section {
   margin: 0 0 32px;
   padding: 24px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
-  color: #e2e8f0;
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e6eefc;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 }
 
 .daily-report-header {
@@ -24,12 +26,13 @@
 
 .daily-report-header h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  color: #0f2f74; /* brand dark blue */
 }
 
 .daily-report-header p {
   margin: 6px 0 0;
-  color: #cbd5e1;
+  color: #64748b; /* muted text */
 }
 
 .daily-report-filter-form {
@@ -41,7 +44,7 @@
 .daily-report-filter-form label {
   display: block;
   margin-bottom: 6px;
-  color: #cbd5e1;
+  color: #64748b;
   font-size: 0.9rem;
 }
 
@@ -49,9 +52,9 @@
   min-width: 170px;
   padding: 9px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.6);
-  color: #e2e8f0;
+  border: 1px solid #c7d9f3;
+  background: #fff;
+  color: #0f172a;
 }
 
 .daily-report-filter-form button {
@@ -59,7 +62,7 @@
   border: none;
   border-radius: 10px;
   padding: 0 14px;
-  background: #0ea5e9;
+  background: linear-gradient(135deg, #06b6d4, #2563eb);
   color: #fff;
   font-weight: 600;
   cursor: pointer;
@@ -74,20 +77,21 @@
 
 .daily-report-card {
   padding: 18px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e6eefc;
 }
 
 .daily-report-card span {
   display: block;
-  color: #cbd5e1;
+  color: #64748b;
   font-size: 0.92rem;
   margin-bottom: 8px;
 }
 
 .daily-report-card strong {
   font-size: 1.4rem;
+  color: #0f172a;
 }
 
 .daily-report-table-wrap {
@@ -103,12 +107,12 @@
 .daily-report-table th,
 .daily-report-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  border-bottom: 1px solid #eef6ff;
   text-align: left;
 }
 
 .daily-report-table th {
-  color: #94a3b8;
+  color: #1e3a8a;
   font-weight: 600;
   font-size: 0.92rem;
 }
@@ -120,9 +124,10 @@
 
 .daily-report-empty {
   padding: 20px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  border: 1px solid #e6eefc;
 }
 
 @media (max-width: 992px) {

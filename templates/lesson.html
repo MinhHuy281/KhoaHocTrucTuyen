@@ -564,7 +564,7 @@
         </div>
     </div>
 
-    {% if user.is_authenticated and can_comment %}
+        {% if can_comment %}
         <form method="post" class="comment-form">
             {% csrf_token %}
             <label class="comment-form__label" for="comment-content">Viết bình luận của bạn</label>
@@ -596,7 +596,7 @@
         {% for comment in comments %}
             <article class="comment-card">
                 <div class="comment-card__head">
-                    <p class="comment-card__user">{{ comment.user.username }}</p>
+                        <p class="comment-card__user">{% if comment.user %}{{ comment.user.username }}{% else %}Khách{% endif %}</p>
                     <div class="comment-card__meta">
                         <div class="stars-display" style="--rating: {{ comment.rating }};" aria-label="{{ comment.rating }} trên 5 sao"></div>
                         {% if comment.rating %}
@@ -615,7 +615,7 @@
                                 {% elif reply.user_id == comment.user_id %}
                                     Phản hồi từ học viên
                                 {% else %}
-                                    Phản hồi từ {{ reply.user.username }}
+                                        Phản hồi từ {% if reply.user %}{{ reply.user.username }}{% else %}Khách{% endif %}
                                 {% endif %}
                                 - {{ reply.created_at|date:"d/m/Y H:i" }}
                             </p>
